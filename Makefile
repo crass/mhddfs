@@ -18,9 +18,11 @@ SRC	=	$(wildcard src/*.c)
 
 OBJ	=	$(SRC:src/%.c=obj/%.o)
 
+DEPS	=	$(OBJ:obj/%.o=obj/%.d)
+
 TARGET	=	mhddfs
 
-CFLAGS	=	-Wall $(shell pkg-config fuse --cflags) -DFUSE_USE_VERSION=26
+CFLAGS	=	-Wall $(shell pkg-config fuse --cflags) -DFUSE_USE_VERSION=26 -MMD
 LDFLAGS	=	$(shell pkg-config fuse --libs)
 
 all: $(TARGET)
@@ -42,3 +44,5 @@ open_project:
 	screen -t vim vim Makefile src/*
 
 .PHONY: all clean open_project
+
+include $(DEPS)
