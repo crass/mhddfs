@@ -119,11 +119,9 @@ int get_free_dir(void)
     statvfs(mhdd.dirs[i], stats+i);
     free_size[i] =stats[i].f_bsize;
     free_size[i] *=stats[i].f_bfree;
-    fprintf(mhdd.debug, "directory %s free %llu\n", mhdd.dirs[i], free_size[i]);
     if(free_size[i]>free_size[max]) max=i;
     if (cfg==-1 && free_size[i]>=mhdd.move_limit) cfg=i;
   }
-
 
   free(stats);
   free(free_size);
