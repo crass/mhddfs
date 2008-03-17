@@ -45,4 +45,4 @@ open_project:
 
 .PHONY: all clean open_project
 
-include $(DEPS)
+include $(wildcard obj/*.d)
