@@ -30,8 +30,9 @@ void usage(FILE * to)
     " mhddfs dir1,dir2.. mountpoint [ -o OPTIONS ]\n"
     "\n"
     "OPTIONS:\n"
-    "  mlimit=xxx - limit for move files (default 4G, minimum 100M)\n"
-    "  logfile=/path/to/file - log file\n"
+    "  mlimit=xxx - limit of the disk free space (if the disk has the free space more than specified\n"
+    " - it is considered as the empty one). Default is 4Gb, but 100Mb at least.\n"
+    "  logfile=/path/to/file - path to a file where the logs will be stored\n"
     "\n"
     " see fusermount(1) for information about other options\n"
     "";
