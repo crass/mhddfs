@@ -36,8 +36,8 @@ int move_file(struct files_info * file, off_t size);
 
 
 // paths
-char * get_parent_path(char * path);
-char * get_base_name(char *path);
+char * get_parent_path(const char * path);
+char * get_base_name(const char *path);
 
 #define MOVE_BLOCK_SIZE     32768
 

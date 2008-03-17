@@ -470,30 +470,45 @@ static int mhdd_unlink(const char *path)
 // rename
 static int mhdd_rename(const char *from, const char *to)
 {
-  char *from_obj=find_path(from);
+  int from_dir_id=find_path_id(from);
 
-  if (!from_obj)
+  if (from_dir_id==-1)
   {
     errno=ENOENT;
     return -errno;
   }
 
-  char *to_obj=find_path(to);
-  if (to_obj)
+  char * to_parent=get_parent_path(to);
+  if (to_parent) 
   {
-    int res;
-    if ((res=rename(from_obj, to_obj))==0)
+    char * to_find_parent=find_path(to_parent);
+    free(to_parent);
+    
+    if (!to_find_parent)
     {
-      free(from_obj);
-      free(to_obj);
-      return 0;
+      errno=ENOENT;
+      return -errno;
     }
-    if (errno==EXDEV)
-    {
+    free(to_find_parent);
+    // to-parent exists
+    // from exists
+    create_parent_dirs(from_dir_id, to);
+    char *obj_to    = create_path(mhdd.dirs[from_dir_id], to);
+    char *obj_from  = create_path(mhdd.dirs[from_dir_id], from);
 
-    }
+    int res=rename(obj_from, obj_to);
+    free(obj_to);
+    free(obj_from);
 
+    if (res==-1) return -errno;
+    return 0;
   }
+  else
+  {
+    errno=ENOENT;
+    return -errno;
+  }
+
 
   return 0;
 }
@@ -516,7 +531,7 @@ static struct fuse_operations mhdd_oper =
   .mkdir      = mhdd_mkdir,
   .rmdir      = mhdd_rmdir,
   .unlink     = mhdd_unlink,
-/*   .rename     = mhdd_rename, */
+  .rename     = mhdd_rename,
 };
 
 

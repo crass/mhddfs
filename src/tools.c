@@ -392,7 +392,7 @@ void create_parent_dirs(int dir_id, const char *path)
   }
 }
 
-char * get_parent_path(char * path)
+char * get_parent_path(const char * path)
 {
   char *dir=strdup(path);
   int len=strlen(dir);
@@ -403,7 +403,7 @@ char * get_parent_path(char * path)
   free(dir);
   return 0;
 }
-char * get_base_name(char *path)
+char * get_base_name(const char *path)
 {
   char *dir=strdup(path);
   int len=strlen(dir);
