@@ -415,6 +415,7 @@ static int mhdd_access(const char *path, int mask)
 // mkdir
 static int mhdd_mkdir(const char * path, mode_t mode)
 {
+  fprintf(mhdd.debug, "mhdd_mkdir: %s mode=%04X\n", path, mode);
   char *parent=strdup(path);
   int len=strlen(parent);
   if (len && parent[len-1]=='/') parent[--len]=0;
@@ -462,6 +463,7 @@ static int mhdd_mkdir(const char * path, mode_t mode)
 // rmdir
 static int mhdd_rmdir(const char * path)
 {
+  fprintf(mhdd.debug, "mhdd_rmdir: %s\n", path);
   char *dir;
   while((dir=find_path(path)))
   {
@@ -475,6 +477,7 @@ static int mhdd_rmdir(const char * path)
 // unlink
 static int mhdd_unlink(const char *path)
 {
+  fprintf(mhdd.debug, "mhdd_unlink: %s\n", path);
   char *file=find_path(path);
   if (file)
   {
@@ -490,6 +493,7 @@ static int mhdd_unlink(const char *path)
 // rename
 static int mhdd_rename(const char *from, const char *to)
 {
+  fprintf(mhdd.debug, "mhdd_rename: from=%s to=%s\n", from, to);
   int from_dir_id=find_path_id(from);
 
   if (from_dir_id==-1)
@@ -537,6 +541,7 @@ static int mhdd_rename(const char *from, const char *to)
 // .utimens
 static int mhdd_utimens(const char *path, const struct timespec ts[2])
 {
+  fprintf(mhdd.debug, "mhdd_utimens: %s\n", path);
   int i, res, flag_found;
 
   for (i=flag_found=0; i<mhdd.cdirs; i++)
@@ -565,6 +570,7 @@ static int mhdd_utimens(const char *path, const struct timespec ts[2])
 // .chmod
 static int mhdd_chmod(const char *path, mode_t mode)
 {
+  fprintf(mhdd.debug, "mhdd_chmod: mode=0x%03X %s\n", mode, path);
   int i, res, flag_found;
 
   for (i=flag_found=0; i<mhdd.cdirs; i++)
@@ -586,6 +592,7 @@ static int mhdd_chmod(const char *path, mode_t mode)
 // chown
 static int mhdd_chown(const char *path, uid_t uid, gid_t gid)
 {
+  fprintf(mhdd.debug, "mhdd_chown: pid=0x%03X gid=%03X %s\n", uid, gid, path);
   int i, res, flag_found;
 
   for (i=flag_found=0; i<mhdd.cdirs; i++)
@@ -607,6 +614,8 @@ static int mhdd_chown(const char *path, uid_t uid, gid_t gid)
 // symlink
 static int mhdd_symlink(const char *from, const char *to)
 {
+  fprintf(mhdd.debug, "mhdd_symlink: from=%s to=%s\n", from, to);
+  int i, res;
   char *parent=get_parent_path(to);
   if (!parent) 
   {
@@ -623,27 +632,28 @@ static int mhdd_symlink(const char *from, const char *to)
     return -errno;
   }
 
+  for (i=0; i<2; i++)
+  {
+    if (i)
+    {
+      dir_id=get_free_dir();
+      create_parent_dirs(dir_id, to);
+    }
 
-  char *path_to=create_path(mhdd.dirs[dir_id], to);
+    char *path_to=create_path(mhdd.dirs[dir_id], to);
 
-  int res=symlink(from, path_to);
-  free(path_to);
-  if (res==0) return 0;
-
-  if (errno!=ENOSPC) return -errno;
-  
-  dir_id=get_free_dir();
-  create_parent_dirs(dir_id, to);
-  path_to=create_path(mhdd.dirs[dir_id], to);
-  res=symlink(from, path_to);
-  free(path_to);
-  if (res==0) return 0;
+    res=symlink(from, path_to);
+    free(path_to);
+    if (res==0) return 0;
+    if (errno!=ENOSPC) return -errno;
+  }
   return -errno;
 }
 
 // mknod
 static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
 {
+  fprintf(mhdd.debug, "mhdd_mknod: path=%s mode=%X\n", path, mode);
   int res, i;
   char *nod;
 
@@ -682,8 +692,7 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
     if (res==0) return 0;
     if (errno!=ENOSPC) return -errno;
   }
-  if (res == -1) return -errno;
-  return 0;
+  return -errno;
 }
 
 // functions links
