@@ -604,6 +604,42 @@ static int mhdd_chown(const char *path, uid_t uid, gid_t gid)
   return -errno;
 }
 
+// symlink
+static int mhdd_symlink(const char *from, const char *to)
+{
+  char *parent=get_parent_path(to);
+  if (!parent) 
+  {
+    errno=ENOENT;
+    return -errno;
+  }
+
+  int dir_id=find_path_id(parent);
+  free(parent);
+  
+  if (dir_id==-1)
+  {
+    errno=ENOENT;
+    return -errno;
+  }
+
+
+  char *path_to=create_path(mhdd.dirs[dir_id], to);
+
+  int res=symlink(from, path_to);
+  free(path_to);
+  if (res==0) return 0;
+
+  if (errno!=ENOSPC) return -errno;
+  
+  dir_id=get_free_dir();
+  create_parent_dirs(dir_id, to);
+  path_to=create_path(mhdd.dirs[dir_id], to);
+  res=symlink(from, path_to);
+  free(path_to);
+  if (res==0) return 0;
+  return -errno;
+}
 
 // functions links
 static struct fuse_operations mhdd_oper = 
@@ -627,6 +663,7 @@ static struct fuse_operations mhdd_oper =
   .utimens    = mhdd_utimens,
   .chmod      = mhdd_chmod,
   .chown      = mhdd_chown,
+  .symlink    = mhdd_symlink,
 };
 
 
