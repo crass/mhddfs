@@ -562,6 +562,48 @@ static int mhdd_utimens(const char *path, const struct timespec ts[2])
   return -errno;
 }
 
+// .chmod
+static int mhdd_chmod(const char *path, mode_t mode)
+{
+  int i, res, flag_found;
+
+  for (i=flag_found=0; i<mhdd.cdirs; i++)
+  {
+    char *object=create_path(mhdd.dirs[i], path);
+    struct stat st;
+    if (lstat(object, &st)!=0) { free(object); continue; }
+    
+    flag_found=1;
+    res=chmod(object, mode);
+    free(object);
+    if (res == -1) return -errno;
+  }
+  if (flag_found) return 0;
+  errno=ENOENT;
+  return -errno;
+}
+
+// chown
+static int mhdd_chown(const char *path, uid_t uid, gid_t gid)
+{
+  int i, res, flag_found;
+
+  for (i=flag_found=0; i<mhdd.cdirs; i++)
+  {
+    char *object=create_path(mhdd.dirs[i], path);
+    struct stat st;
+    if (lstat(object, &st)!=0) { free(object); continue; }
+    
+    flag_found=1;
+    res=lchown(object, uid, gid);
+    free(object);
+    if (res == -1) return -errno;
+  }
+  if (flag_found) return 0;
+  errno=ENOENT;
+  return -errno;
+}
+
 
 // functions links
 static struct fuse_operations mhdd_oper = 
@@ -583,6 +625,8 @@ static struct fuse_operations mhdd_oper =
   .unlink     = mhdd_unlink,
   .rename     = mhdd_rename,
   .utimens    = mhdd_utimens,
+  .chmod      = mhdd_chmod,
+  .chown      = mhdd_chown,
 };
 
 
