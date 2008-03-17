@@ -278,5 +278,5 @@ void parse_options(int * pargc, char *argv[])
 
   *pargc=argc;
 
-  for (i=0; i<argc; i++) fprintf(stderr, "argv[%d]=%s\n", i, argv[i]);
+/*   for (i=0; i<argc; i++) fprintf(stderr, "argv[%d]=%s\n", i, argv[i]); */
 }

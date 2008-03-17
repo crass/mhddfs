@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/vfs.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <utime.h>
 
 #include "parse_options.h"
 #include "tools.h"
@@ -519,17 +521,47 @@ static int mhdd_rename(const char *from, const char *to)
     free(obj_from);
 
     if (res==-1) return -errno;
-    return 0;
+
+    if (find_path_id(from)==-1) return 0;
+    // rename directories
+    return mhdd_rename(from, to);
   }
   else
   {
     errno=ENOENT;
     return -errno;
   }
-
-
   return 0;
 }
+
+// .utimens
+static int mhdd_utimens(const char *path, const struct timespec ts[2])
+{
+  int i, res, flag_found;
+
+  for (i=flag_found=0; i<mhdd.cdirs; i++)
+  {
+    char *object=create_path(mhdd.dirs[i], path);
+    struct stat st;
+    if (lstat(object, &st)!=0) { free(object); continue; }
+    
+    flag_found=1;
+    struct timeval tv[2];
+
+    tv[0].tv_sec = ts[0].tv_sec;
+    tv[0].tv_usec = ts[0].tv_nsec / 1000;
+    tv[1].tv_sec = ts[1].tv_sec;
+    tv[1].tv_usec = ts[1].tv_nsec / 1000;
+
+    res = utimes(object, tv);
+    free(object);
+    if (res == -1) return -errno;
+  }
+  if (flag_found) return 0;
+  errno=ENOENT;
+  return -errno;
+}
+
 
 // functions links
 static struct fuse_operations mhdd_oper = 
@@ -550,6 +582,7 @@ static struct fuse_operations mhdd_oper =
   .rmdir      = mhdd_rmdir,
   .unlink     = mhdd_unlink,
   .rename     = mhdd_rename,
+  .utimens    = mhdd_utimens,
 };
 
 
