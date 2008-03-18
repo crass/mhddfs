@@ -39,6 +39,7 @@ static uint64_t get_new_id(void)
 
   for(id++;;id++)
   {
+    if (!id) continue;
     for(next=files; next; next=next->next)
     {
       if (next->id==id) break;
@@ -144,7 +145,8 @@ int find_free_space(off_t size)
     free_size[i] =stats[i].f_bsize;
     free_size[i] *=stats[i].f_bfree;
 
-    fprintf(mhdd.debug, "directory %s free: %llu size: %llu\n", mhdd.dirs[i], free_size[i], size);
+    fprintf(mhdd.debug, "directory %s free: %llu size: %llu\n", 
+      mhdd.dirs[i], free_size[i], size);
 
     if (free_size[i]>free_size[max]) max=i;
     if (cfg==-1 && free_size[i]>=size+mhdd.move_limit) cfg=i;
