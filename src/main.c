@@ -695,6 +695,44 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
   return -errno;
 }
 
+//fsync
+static int mhdd_fsync(const char *path, int isdatasync, 
+  struct fuse_file_info *fi)
+{
+  fprintf(mhdd.debug, "mhdd_fsync: path=%s handle=%llu\n", path, fi->fh);
+  struct files_info *info=get_info_by_id(fi->fh);
+  int res;
+  if (!info)
+  {
+    errno=EBADF;
+    return -errno;
+  }
+
+#ifdef HAVE_FDATASYNC
+  if (isdatasync)
+    res = fdatasync(info->fh);
+  else
+#endif
+    res = fsync(info->fh);
+  if (res == -1) return -errno;
+  return 0;
+}
+
+// lock
+static int mhdd_lock(const char *path, struct fuse_file_info *fi,
+  int cmd, struct flock *lock)
+{
+  fprintf(mhdd.debug, "mhdd_lock: path=%s handle=%llu\n", path, fi->fh);
+  struct files_info *info=get_info_by_id(fi->fh);
+  if (!info)
+  {
+    errno=EBADF;
+    return -errno;
+  }
+  if (fcntl(info->fh, cmd, lock)==-1) return -errno;
+  return 0;
+}
+
 // functions links
 static struct fuse_operations mhdd_oper = 
 {
@@ -719,6 +757,8 @@ static struct fuse_operations mhdd_oper =
   .chown      = mhdd_chown,
   .symlink    = mhdd_symlink,
   .mknod      = mhdd_mknod,
+  .fsync      = mhdd_fsync,
+  .lock       = mhdd_lock,
 };
 
 
