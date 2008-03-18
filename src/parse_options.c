@@ -98,10 +98,13 @@ void parse_options(int * pargc, char *argv[])
   mhdd.debug=stderr;
   
   // parse command-line
-  for(i=0; (opt=getopt(argc, argv, "Vho:"))!=-1; i++)
+  for(i=0; (opt=getopt(argc, argv, "sVho:"))!=-1; i++)
   {
     switch(opt)
     {
+      case 's':
+        break;
+
       case 'V':
         printf("mhddfs: version: %s\n", VERSION);
         exit(0);

@@ -317,7 +317,9 @@ static int mhdd_read(const char *path, char *buf, size_t count, off_t offset,
     return -errno;
   }
 
+  pthread_mutex_lock(&info->lock);
   res=pread(info->fh, buf, count, offset);
+  pthread_mutex_unlock(&info->lock);
   if (res==-1) return -errno;
   return res;
 }
@@ -336,6 +338,8 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
     errno=EBADF;
     return -errno;
   }
+
+  pthread_mutex_lock(&info->lock);
   res=pwrite(info->fh, buf, count, offset);
   if (res==-1)
   {
@@ -345,6 +349,7 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
       if (move_file(info, offset+count)==0) 
       {
         res=pwrite(info->fh, buf, count, offset);
+        pthread_mutex_unlock(&info->lock);
         if (res==-1) 
         {
 /*           fprintf(mhdd.debug, "mhdd_write: error restart write: %s\n", */
@@ -355,8 +360,10 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
       }
       errno=ENOSPC;
     }
+    pthread_mutex_unlock(&info->lock);
     return -errno;
   }
+  pthread_mutex_unlock(&info->lock);
   return res;
 }
 
@@ -766,5 +773,6 @@ static struct fuse_operations mhdd_oper =
 int main(int argc, char *argv[])
 {
   parse_options(&argc, argv);
+  mhdd_tools_init();
   return fuse_main(argc, argv, &mhdd_oper, 0);
 }

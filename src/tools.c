@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parse_options.h"
 
 struct files_info *files=0;
+static pthread_mutex_t files_lock;
 
 static uint64_t get_new_id(void)
 {
@@ -55,11 +56,14 @@ struct files_info * add_file_list(const char *name,
 {
   struct files_info * add=calloc(1, sizeof(struct files_info));
 
+  pthread_mutex_lock(&files_lock);
+
   add->flags=flags;
   add->id=get_new_id();
   add->name=strdup(name);
   add->real_name=strdup(real_name);
   add->fh=fh;
+  pthread_mutex_init(&add->lock, 0);
 
   if (files)
   {
@@ -71,6 +75,8 @@ struct files_info * add_file_list(const char *name,
   {
     files=add;
   }
+
+  pthread_mutex_unlock(&files_lock);
   return add;
 }
 
@@ -91,10 +97,15 @@ struct files_info * get_info_by_id(uint64_t id)
   fprintf(mhdd.debug, "\n");
   return 0;
 }
+void mhdd_tools_init(void)
+{
+  pthread_mutex_init(&files_lock, 0);
+}
 
 // delete from file list
 void del_file_list(struct files_info * item)
 {
+  pthread_mutex_lock(&files_lock);
   if (item==files)
   {
     if (files->next) files=files->next;
@@ -106,6 +117,7 @@ void del_file_list(struct files_info * item)
   free(item->name);
   free(item->real_name);
   free(item);
+  pthread_mutex_unlock(&files_lock);
 }
 
 // get diridx for maximum free space

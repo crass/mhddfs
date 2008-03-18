@@ -20,10 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define __TOOLS__H__
 
 #include <stdint.h>
+#include <pthread.h>
 
 // opened file list
 struct files_info
 {
+  pthread_mutex_t lock;
   char        *name;
   char        *real_name;
   int         flags;
@@ -34,6 +36,7 @@ struct files_info
 
 extern struct files_info *files;
 
+void mhdd_tools_init(void);
 
 struct files_info * add_file_list(const char *name, 
   const char *real_name, int flags, int fh);
