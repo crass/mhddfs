@@ -234,7 +234,7 @@ static int mhdd_readlink(const char *path, char *buf, size_t size)
 static int mhdd_create(const char *file, 
   mode_t mode, struct fuse_file_info *fi)
 {
-  fprintf(mhdd.debug, "mhdd_create: %s, handle=%d\n", file, fi->flags);
+  fprintf(mhdd.debug, "mhdd_create: %s, mode=%X\n", file, fi->flags);
   
   char *path=find_path(file);
 
@@ -479,15 +479,15 @@ static int mhdd_unlink(const char *path)
 {
   fprintf(mhdd.debug, "mhdd_unlink: %s\n", path);
   char *file=find_path(path);
-  if (file)
+  if (!file)
   {
-    int res=unlink(file);
-    free(file);
-    if (res==-1) return -errno;
-    return 0;
+    errno=ENOENT;
+    return -errno;
   }
-  errno=ENOENT;
-  return -errno;
+  int res=unlink(file);
+  free(file);
+  if (res==-1) return -errno;
+  return 0;
 }
 
 // rename
