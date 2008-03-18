@@ -1,0 +1,4 @@
+0.1.1
+* Added changelog;
+* Using pthread_mutex for multithread;
+* Added -s (single thread) option;
