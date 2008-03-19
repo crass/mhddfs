@@ -25,7 +25,20 @@ TARGET	=	mhddfs
 CFLAGS	=	-Wall $(shell pkg-config fuse --cflags) -DFUSE_USE_VERSION=26 -MMD
 LDFLAGS	=	$(shell pkg-config fuse --libs)
 
+FORTAR	=	src COPYING LICENSE README Makefile README.ru.UTF-8
+
+VERSION	=	$(shell cat src/version.h  \
+	|grep '^.define'|grep '[[:space:]]VERSION[[:space:]]' \
+	|awk '{print $$3}'|sed 's/\"//g' )
+
 all: $(TARGET)
+
+tarball:
+	mkdir mhddfs-$(VERSION)
+	cp -r $(FORTAR) mhddfs-$(VERSION)
+	tar -czvf mhddfs_$(VERSION).tar.gz mhddfs-$(VERSION)
+	rm -fr mhddfs-$(VERSION)
+
 
 $(TARGET): obj/obj-stamp $(OBJ)
 	gcc $(CFLAGS) $(LDFLAGS) $(OBJ) -o $@
@@ -43,6 +56,6 @@ clean:
 open_project:
 	screen -t vim vim Makefile src/* README* ChangeLog
 
-.PHONY: all clean open_project
+.PHONY: all clean open_project tarball
 
 include $(wildcard obj/*.d)
