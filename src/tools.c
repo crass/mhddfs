@@ -50,13 +50,23 @@ static uint64_t get_new_id(void)
   }
 }
 
+void lock_files(void)
+{
+  pthread_mutex_lock(&files_lock);
+}
+
+void unlock_files(void)
+{
+  pthread_mutex_unlock(&files_lock);
+}
+
 // add file to list
 struct files_info * add_file_list(const char *name, 
   const char *real_name, int flags, int fh)
 {
   struct files_info * add=calloc(1, sizeof(struct files_info));
 
-  pthread_mutex_lock(&files_lock);
+  lock_files();
 
   add->flags=flags;
   add->id=get_new_id();
@@ -76,7 +86,7 @@ struct files_info * add_file_list(const char *name,
     files=add;
   }
 
-  pthread_mutex_unlock(&files_lock);
+  unlock_files();
   return add;
 }
 
@@ -105,71 +115,111 @@ void mhdd_tools_init(void)
 // delete from file list
 void del_file_list(struct files_info * item)
 {
-  pthread_mutex_lock(&files_lock);
-  if (item==files)
-  {
-    if (files->next) files=files->next;
-    else files=files->prev;
-  }
+  struct files_info *next;
+  lock_files();
 
-  if (item->next) item->next->prev=item->prev;
-  if (item->prev) item->prev->next=item->next;
-  free(item->name);
-  free(item->real_name);
-  free(item);
-  pthread_mutex_unlock(&files_lock);
+  for (next=files; next; next=next->next)
+  {
+    if (next==item) 
+    {
+      pthread_mutex_lock(&item->lock);
+      if (item==files)
+      {
+        if (files->next) files=files->next;
+        else files=files->prev;
+      }
+
+      if (item->next) item->next->prev=item->prev;
+      if (item->prev) item->prev->next=item->next;
+      
+      pthread_mutex_unlock(&item->lock);
+      free(item->name);
+      free(item->real_name);
+      free(item);
+      break;
+    }
+  }
+  unlock_files();
 }
 
 // get diridx for maximum free space
 int get_free_dir(void)
 {
   int i, max, cfg=-1;
-  struct statvfs *stats=calloc(mhdd.cdirs, sizeof(struct statvfs));
-  fsblkcnt_t * free_size=calloc(mhdd.cdirs, sizeof(fsblkcnt_t));
+  struct statvfs stf;
+  fsblkcnt_t max_space=0;
 
   for (max=i=0; i<mhdd.cdirs; i++)
   {
-    statvfs(mhdd.dirs[i], stats+i);
-    free_size[i] =stats[i].f_bsize;
-    free_size[i] *=stats[i].f_bfree;
-    if(free_size[i]>free_size[max]) max=i;
-    if (cfg==-1 && free_size[i]>=mhdd.move_limit) cfg=i;
+    if (statvfs(mhdd.dirs[i], &stf)!=0) continue;
+    fsblkcnt_t space  = stf.f_bsize;
+    space *= stf.f_bavail;
+
+    if(space>max_space)
+    {
+      max_space=space;
+      max=i;
+    }
+    if (cfg==-1 && space>=mhdd.move_limit) cfg=i;
   }
 
-  free(stats);
-  free(free_size);
-  if (cfg==-1) return max;
-  fprintf(mhdd.debug, "cfg:max = %d:%d\n", cfg, max);
-  return cfg;
+  return (cfg==-1)?max:cfg;
+}
+
+// get diridx for maximum free space
+int get_free_dir_by_path(const char *path)
+{
+  if (strcmp(path, "/")==0) return get_free_dir();
+
+  int i, max_id;
+  fsblkcnt_t max_space=0;
+  
+  for (max_id=-1,i=0; i<mhdd.cdirs; i++)
+  {
+    struct stat st;
+    char *dir=create_path(mhdd.dirs[i], path);
+    int ret=lstat(dir, &st);
+    free(dir);
+    if (ret!=0) continue;
+    struct statvfs stf;
+    if (statvfs(mhdd.dirs[i], &stf)==0)
+    {
+      fsblkcnt_t space  = stf.f_bsize;
+      space *= stf.f_bavail;
+
+      if (space>max_space||max_id==-1) 
+      {
+        max_space=space;
+        max_id=i;
+      }
+    }
+  }
+  return max_id;
 }
 
 // find mount point with free space > size
 // -1 if not found
-int find_free_space(off_t size)
+static int find_free_space(off_t size)
 {
-  int i, max, cfg=-1;
-  struct statvfs *stats=calloc(mhdd.cdirs, sizeof(struct statvfs));
-  fsblkcnt_t * free_size=calloc(mhdd.cdirs, sizeof(fsblkcnt_t));
+  int i, max;
+  struct statvfs stf;
+  fsblkcnt_t max_space=0;
 
-  for (max=i=0; i<mhdd.cdirs; i++)
+  for (max=-1,i=0; i<mhdd.cdirs; i++)
   {
-    statvfs(mhdd.dirs[i], stats+i);
-    free_size[i] =stats[i].f_bsize;
-    free_size[i] *=stats[i].f_bfree;
+    if (statvfs(mhdd.dirs[i], &stf)!=0) continue;
+    fsblkcnt_t space  = stf.f_bsize;
+    space *= stf.f_bavail;
 
-    fprintf(mhdd.debug, "directory %s free: %llu size: %llu\n", 
-      mhdd.dirs[i], free_size[i], size);
+    if (space>size+mhdd.move_limit) return i;
 
-    if (free_size[i]>free_size[max]) max=i;
-    if (cfg==-1 && free_size[i]>=size+mhdd.move_limit) cfg=i;
+    if (space>size)
+    {
+      max_space=space;
+      max=i;
+    }
   }
-
-  if (free_size[max]<size) max=-1;
-
-  free(stats);
-  free(free_size);
-  if (cfg==-1) return max;
-  return cfg;
+  return max;
 }
 
 static int reopen_files(struct files_info * file, const char *new_name)
@@ -179,11 +229,13 @@ static int reopen_files(struct files_info * file, const char *new_name)
   // move to top list
   if (file!=files)
   {
+    lock_files();
     if (file->next) file->next->prev=file->prev;
     if (file->prev) file->prev->next=file->next;
     file->next=files;
     file->prev=0;
     files=file;
+    unlock_files();
   }
 
   // reopen files
@@ -214,9 +266,17 @@ static int reopen_files(struct files_info * file, const char *new_name)
     }
 
     // filehandle
+    if (dup2(fh, next->fh)!=next->fh)
+    {
+      fprintf(mhdd.debug, "reopen_files: error dup2 %s\n",
+        strerror(errno));
+      close(fh);
+      return(-1);
+    }
+
+    close(fh);
     fprintf(mhdd.debug, "reopen_files: file %s old h=%x new h=%x\n",
       next->real_name, next->fh, fh);
-    next->fh=fh;
 
     fprintf(mhdd.debug, "reopen_files: file %s reopened to %s\n",
       next->real_name, new_name);

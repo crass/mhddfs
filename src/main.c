@@ -45,13 +45,11 @@ static int mhdd_stat(const char *file_name, struct stat *buf)
     if (ret==-1) return -errno;
     return 0;
   }
-/*   fprintf(mhdd.debug, "mhdd_stat: %s not found\n", file_name); */
-  memset(buf, 0, sizeof(struct stat));
   errno=ENOENT;
   return -errno;
 }
 
-
+//statvfs
 static int mhdd_statfs(const char *path, struct statvfs *buf)
 {
   int i;
@@ -230,75 +228,98 @@ static int mhdd_readlink(const char *path, char *buf, size_t size)
   return -1;
 }
 
+#define CREATE_FUNCTION 0
+#define OPEN_FUNCION    1
+// create or open
+static int mhdd_internal_open(const char *file,
+  mode_t mode, struct fuse_file_info *fi, int what)
+{
+  fprintf(mhdd.debug, "mhdd_internal_open: %s, flags=0x%X\n", file, fi->flags);
+  int dir_id, fd;
+
+  char *parent, *path=find_path(file);
+
+  if (path)
+  {
+    if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
+    else fd=open(path, fi->flags);
+    if (fd==-1) { free(path); return -errno; }
+    struct files_info *add=add_file_list(file, path, fi->flags, fd);
+    fi->fh=add->id;
+    free(path);
+    return 0;
+  }
+  
+  parent=get_parent_path(file);
+  if (!parent) { errno=ENOTDIR; return -errno; }
+
+  dir_id=get_free_dir_by_path(parent);
+  free(parent);
+
+  if (dir_id==-1) { errno=ENOTDIR; return -errno; }
+  
+  path=create_path(mhdd.dirs[dir_id], file);
+
+  if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
+  else fd=open(path, fi->flags);
+
+  if (fd==-1)
+  {
+    free(path);
+    if (errno!=ENOSPC)
+    {
+      fprintf(mhdd.debug, "mhdd_internal_open: >>> test\n");
+      return -errno;
+    }
+    
+    int new_dir_id=get_free_dir();
+    if (new_dir_id==dir_id) { errno=ENOSPC; return -errno; }
+    path=create_path(mhdd.dirs[new_dir_id], file);
+    create_parent_dirs(new_dir_id, path);
+    if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
+    else fd=open(path, fi->flags);
+    if (fd==-1) { free(path); return -errno; }
+  }
+  struct files_info *add=add_file_list(file, path, fi->flags, fd);
+  fi->fh=add->id;
+  free(path);
+  return 0;
+}
+
 // create
 static int mhdd_create(const char *file, 
   mode_t mode, struct fuse_file_info *fi)
 {
   fprintf(mhdd.debug, "mhdd_create: %s, mode=%X\n", file, fi->flags);
-  
-  char *path=find_path(file);
-
-  if (!path)
-  {
-    int dir_id=get_free_dir();
-    create_parent_dirs(dir_id, file);
-    path=create_path(mhdd.dirs[dir_id], file);
-  }
-  
-  int fd=open(path, fi->flags, mode);
-  if (fd==-1)
-  {
-    free(path);
-    return -errno;
-  }
-  struct files_info *add=add_file_list(file, path, fi->flags, fd);
-  fi->fh=add->id;
-  free(path);
-  return 0;
+  return mhdd_internal_open(file, mode, fi, CREATE_FUNCTION);
 }
-
 
 // open
 static int mhdd_fileopen(const char *file, struct fuse_file_info *fi)
 {
   fprintf(mhdd.debug, "mhdd_fileopen: %s, flags=%04X\n", file, fi->flags);
-
-  char *path=find_path(file);
-
-  if (!path)
-  {
-    int dir_id=get_free_dir();
-    create_parent_dirs(dir_id, file);
-    path=create_path(mhdd.dirs[dir_id], file);
-  }
-  
-  int fd=open(path, fi->flags);
-  if (fd==-1)
-  {
-    free(path);
-    return -errno;
-  }
-  struct files_info *add=add_file_list(file, path, fi->flags, fd);
-  fi->fh=add->id;
-  free(path);
-  return 0;
+  return mhdd_internal_open(file, 0, fi, OPEN_FUNCION);
 }
-
-
 
 // close
 static int mhdd_release(const char *path, struct fuse_file_info *fi)
 {
   fprintf(mhdd.debug, "mhdd_release: %s, handle=%lld\n", path, fi->fh);
+
+  lock_files();
   struct files_info *del=get_info_by_id(fi->fh);
   if (!del)
   {
     fprintf(mhdd.debug, "mhdd_release: unknown file number: %llu\n", fi->fh);
     errno=EBADF;
+    unlock_files();
     return -errno;
   }
 
-  close(del->fh);
+  int fh=del->fh;
+  unlock_files();
+
+  close(fh);
   del_file_list(del);
   return 0;
 }
@@ -308,16 +329,20 @@ static int mhdd_read(const char *path, char *buf, size_t count, off_t offset,
          struct fuse_file_info *fi)
 {
   ssize_t res;
+  lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
 /*   fprintf(mhdd.debug, "mhdd_read: %s, handle=%lld\n", path, fi->fh); */
 
   if (!info)
   {
+    unlock_files();
     errno=EBADF;
     return -errno;
   }
 
   pthread_mutex_lock(&info->lock);
+  unlock_files();
+
   res=pread(info->fh, buf, count, offset);
   pthread_mutex_unlock(&info->lock);
   if (res==-1) return -errno;
@@ -329,17 +354,20 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
   off_t offset, struct fuse_file_info *fi)
 {
   ssize_t res;
+  lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
 /*   fprintf(mhdd.debug, "mhdd_write: %s, handle=%lld\n", path, fi->fh); */
 
   if (!info)
   {
-    fprintf(mhdd.debug, "mhdd_write: unknown file number: %llu", fi->fh);
+    unlock_files();
     errno=EBADF;
     return -errno;
   }
-
+  
   pthread_mutex_lock(&info->lock);
+  unlock_files();
+
   res=pwrite(info->fh, buf, count, offset);
   if (res==-1)
   {
@@ -388,16 +416,20 @@ static int mhdd_ftruncate(const char *path, off_t size,
   struct fuse_file_info *fi)
 {
   int res;
+  lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
   fprintf(mhdd.debug, "mhdd_ftruncate: %s, handle=%lld\n", path, fi->fh);
 
   if (!info)
   {
+    unlock_files();
     errno=EBADF;
     return -errno;
   }
 
-  res=ftruncate(info->fh, size);
+  int fh=info->fh;
+  unlock_files();
+  res=ftruncate(fh, size);
   if (res==-1) return -errno;
   return 0;
 }
@@ -707,36 +739,26 @@ static int mhdd_fsync(const char *path, int isdatasync,
   struct fuse_file_info *fi)
 {
   fprintf(mhdd.debug, "mhdd_fsync: path=%s handle=%llu\n", path, fi->fh);
+  lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
   int res;
   if (!info)
   {
     errno=EBADF;
+    unlock_files();
     return -errno;
   }
+
+  int fh=info->fh;
+  unlock_files();
 
 #ifdef HAVE_FDATASYNC
   if (isdatasync)
-    res = fdatasync(info->fh);
+    res = fdatasync(fh);
   else
 #endif
-    res = fsync(info->fh);
+    res = fsync(fh);
   if (res == -1) return -errno;
-  return 0;
-}
-
-// lock
-static int mhdd_lock(const char *path, struct fuse_file_info *fi,
-  int cmd, struct flock *lock)
-{
-  fprintf(mhdd.debug, "mhdd_lock: path=%s handle=%llu\n", path, fi->fh);
-  struct files_info *info=get_info_by_id(fi->fh);
-  if (!info)
-  {
-    errno=EBADF;
-    return -errno;
-  }
-  if (fcntl(info->fh, cmd, lock)==-1) return -errno;
   return 0;
 }
 
@@ -765,7 +787,6 @@ static struct fuse_operations mhdd_oper =
   .symlink    = mhdd_symlink,
   .mknod      = mhdd_mknod,
   .fsync      = mhdd_fsync,
-  .lock       = mhdd_lock,
 };
 
 

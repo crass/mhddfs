@@ -44,12 +44,12 @@ struct files_info * add_file_list(const char *name,
 struct files_info * get_info_by_id(uint64_t id);
 void del_file_list(struct files_info * item);
 int get_free_dir(void);
+int get_free_dir_by_path(const char *path);
 char * create_path(const char *dir, const char * file);
 char * find_path(const char *file);
 int find_path_id(const char *file);
 
 void create_parent_dirs(int dir_id, const char *path);
-int find_free_space(off_t size);
 
 
 // true if success
@@ -59,6 +59,9 @@ int move_file(struct files_info * file, off_t size);
 // paths
 char * get_parent_path(const char * path);
 char * get_base_name(const char *path);
+
+void lock_files(void);
+void unlock_files(void);
 
 #define MOVE_BLOCK_SIZE     32768
 
