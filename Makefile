@@ -41,7 +41,7 @@ clean:
 	rm -fr obj $(TARGET)
 
 open_project:
-	screen -t vim vim Makefile src/*
+	screen -t vim vim Makefile src/* README* ChangeLog
 
 .PHONY: all clean open_project
 
