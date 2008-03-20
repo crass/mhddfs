@@ -2,6 +2,9 @@ The driver combines a several mount points into the single one.
 
 Using
 ~~~~~
+mhddfs /path/to/dir1,/path/to/dir2[,/path/to/dir3] /path/to/mount
+fusermount -u /path/to/mount
+
 with an "-o option" you can specify some additional options:
 
 -o logfile=/path/to/file.log  
@@ -90,6 +93,11 @@ free space for a file. The transferring is processed on-the-fly, fully
 transparent for the application that is writing. So this behaviour
 simulates a big file system.
 
+WARNING: The filesystems are combined must provide a possibility to
+get their parameters correctly (e.g. size of free space). Otherwise
+the writing failure can occur (but data consistency will be ok
+anyway). For example it is a bad idea to combine a several sshfs
+systems together.
 
 File system's functions
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -114,7 +122,8 @@ Functions are supported:
 - file locks;
 
 Install
-======
+~~~~~~~
+
 It's neccessary for install to have:
 1. FUSE header files
 2. GCC  
