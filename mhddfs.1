@@ -4,23 +4,23 @@ mhddfs \- The driver combines a several mount points into the single one
 .SH SYNOPSIS
  mhddfs /path/to/dir1,/path/to/dir2[,/path/to/dir3] /path/to/mount
  ...
- fusermount -u /path/to/mount
+ fusermount \-u /path/to/mount
 .SH OPTIONS
 
-with an "-o option" you can specify some additional options:
+with an "\-o option1,option2..." you can specify some additional options:
 
 .SS logfile=/path/to/file.log  
 specify a file that will contain debug information.
 
 .SS loglevel=x
 .RS
-0 - debug messages
+0 \- debug messages
 
-1 - info messages
+1 \- info messages
 
-2 - standard (default) messages
+2 \- standard (default) messages
 .RE
-.SS mlimit=size[m|k|g]
+.SS mlimit=size\[m|k|g]
 .RS
 a free space size threshold
 If a drive has the free space less than the threshold specifed
@@ -32,16 +32,16 @@ choosen.
 Default value is 4G, minimum value is 100M.
 This option accepts suffixes:
 .RS
-[mM] - megabytes
+[mM] \- megabytes
 
-[gG] - gigabytes
+[gG] \- gigabytes
 
-[kK] - kilobytes
+[kK] \- kilobytes
 .RE
 .PP
 For an information about the additional options see output of:
 .RS
-mhddfs -h
+mhddfs \-h
 .RE
 .RE
 
@@ -63,7 +63,7 @@ big one hdd.
 .PP
 If an overflow arises while writing to the hdd1 then a file content
 already written will be transferred to a hdd containing enough of
-free space for a file. The transferring is processed on-the-fly, fully
+free space for a file. The transferring is processed on\-the\-fly, fully
 transparent for the application that is writing. So this behaviour
 simulates a big file system.
 .PP
@@ -77,9 +77,8 @@ systems together.
 Please read FUSE documentation for a further conception.
 
 .SH COPYRIGHT
-Distributed under GPLv3
+Distributed under 
+.B GPLv3
 
 Copyright (C) 2008 Dmitry E. Oboukhov 
-.UR mailto:dimka@avanto.org
 .I <dimka@avanto.org>
-.UE
