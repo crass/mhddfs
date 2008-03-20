@@ -5,7 +5,7 @@
 
 0.1.2
 * Added English README
-* Optimize open/create
+* Optimized open/create
 * removed lock (not needed)
 
 0.1.3
