@@ -789,7 +789,10 @@ static struct fuse_operations mhdd_oper =
 // start
 int main(int argc, char *argv[])
 {
-  parse_options(&argc, argv);
+  int i, cargc=argc;
+  char ** cargv=(char **)calloc(argc, sizeof(char *));
+  for (i=0; i<argc; i++) cargv[i]=strdup(argv[i]);
+  parse_options(&cargc, cargv);
   mhdd_tools_init();
-  return fuse_main(argc, argv, &mhdd_oper, 0);
+  return fuse_main(cargc, cargv, &mhdd_oper, 0);
 }
