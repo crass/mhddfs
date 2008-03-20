@@ -5,6 +5,11 @@ mhddfs \- The driver combines a several mount points into the single one
  mhddfs /path/to/dir1,/path/to/dir2[,/path/to/dir3] /path/to/mount
  ...
  fusermount \-u /path/to/mount
+.SS fstab record example:
+mhddfs#/path/to/dir1,/path/to/dir2 /mnt/point fuse defaults 0 0
+
+mhddfs#/path/to/dir1,/path/to/dir2 /mnt/point fuse logfile=/var/log/mhddfs.log 0 0
+
 .SH OPTIONS
 
 with an "\-o option1,option2..." you can specify some additional options:
@@ -50,7 +55,8 @@ mhddfs \-h
 The file system allows to unite a several mount points (or directories) to the
 single one. So a one big filesystem is simulated and this makes it possible
 to combine a several hard drives or network file systems. This system is like
-unionfs but it can choose a drive with the most of free space, and move the
+.B unionfs
+but it can choose a drive with the most of free space, and move the
 data between drives transparently for the applications.
 .PP
 While writing files they are written to a 1st hdd until the hdd has
@@ -71,7 +77,8 @@ simulates a big file system.
 The filesystems are combined must provide a possibility to
 get their parameters correctly (e.g. size of free space). Otherwise
 the writing failure can occur (but data consistency will be ok
-anyway). For example it is a bad idea to combine a several sshfs
+anyway). For example it is a bad idea to combine a several 
+.B sshfs
 systems together.
 
 Please read FUSE documentation for a further conception.
