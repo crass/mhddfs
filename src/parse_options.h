@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define __PARSE__OPTIONS__H__
 
 #include <stdio.h>
+#include <sys/types.h>
 
 struct mhdd_config
 {

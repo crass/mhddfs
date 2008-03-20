@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fcntl.h>
 
 #include "tools.h"
+#include "debug.h"
 #include "parse_options.h"
 
 struct files_info *files=0;
@@ -98,13 +99,13 @@ struct files_info * get_info_by_id(uint64_t id)
     if (next->id==id) return next;
   }
 
-  fprintf(mhdd.debug, "get_info_by_id: "
+  mhdd_debug(MHDD_DEBUG, "get_info_by_id: "
     "fileno %llu not found, fileno list:", id);
   for (next=files; next; next=next->next)
   {
-    fprintf(mhdd.debug, " %llu", next->id);
+    mhdd_debug(MHDD_DEBUG, " %llu", next->id);
   }
-  fprintf(mhdd.debug, "\n");
+  mhdd_debug(MHDD_DEBUG, "\n");
   return 0;
 }
 void mhdd_tools_init(void)
@@ -251,7 +252,7 @@ static int reopen_files(struct files_info * file, const char *new_name)
     int fh=open(new_name, flags);
     if (fh==-1)
     {
-      fprintf(mhdd.debug, "reopen_files: error reopen: %s\n",
+      mhdd_debug(MHDD_INFO, "reopen_files: error reopen: %s\n",
         strerror(errno));
       return -errno;
     }
@@ -259,7 +260,7 @@ static int reopen_files(struct files_info * file, const char *new_name)
     // seek
     if (seek!=lseek(fh, seek, SEEK_SET))
     {
-      fprintf(mhdd.debug, "reopen_files: error seek %s\n",
+      mhdd_debug(MHDD_INFO, "reopen_files: error seek %s\n",
         strerror(errno));
       close(fh);
       return(-1);
@@ -268,18 +269,16 @@ static int reopen_files(struct files_info * file, const char *new_name)
     // filehandle
     if (dup2(fh, next->fh)!=next->fh)
     {
-      fprintf(mhdd.debug, "reopen_files: error dup2 %s\n",
+      mhdd_debug(MHDD_INFO, "reopen_files: error dup2 %s\n",
         strerror(errno));
       close(fh);
       return(-1);
     }
 
     close(fh);
-    fprintf(mhdd.debug, "reopen_files: file %s old h=%x new h=%x\n",
-      next->real_name, next->fh, fh);
+    mhdd_debug(MHDD_MSG, "reopen_files: file %s (to %s) old h=%x new h=%x\n",
+      next->real_name, new_name, next->fh, fh);
 
-    fprintf(mhdd.debug, "reopen_files: file %s reopened to %s\n",
-      next->real_name, new_name);
     free(next->real_name);
     next->real_name=strdup(new_name);
   }
@@ -317,7 +316,7 @@ int move_file(struct files_info * file, off_t wsize)
     return -errno;
   }
 
-  fprintf(mhdd.debug, "move_file: move %s to %s\n", from, to);
+  mhdd_debug(MHDD_MSG, "move_file: move %s to %s\n", from, to);
 
   // move data
   buf=(char *)calloc(sizeof(char), MOVE_BLOCK_SIZE);
@@ -330,20 +329,20 @@ int move_file(struct files_info * file, off_t wsize)
       free(buf);
       unlink(to);
       free(to);
-      fprintf(mhdd.debug, "move_file: error move data\n");
+      mhdd_debug(MHDD_MSG, "move_file: error move data\n");
       return -1;
     }
   }
   free(buf);
 
-  fprintf(mhdd.debug, "move_file: done move data\n");
+  mhdd_debug(MHDD_MSG, "move_file: done move data\n");
   fclose(input);
   fclose(output);
 
   struct stat st;
   if (stat(to, &st)!=0)
   {
-    fprintf(mhdd.debug, "move_file: error stat %s\n", to);
+    mhdd_debug(MHDD_MSG, "move_file: error stat %s\n", to);
     unlink(to);
     free(to);
     return -1;
@@ -364,7 +363,7 @@ int move_file(struct files_info * file, off_t wsize)
   
   if (ret==0) unlink(from);
   else unlink(to);
-  fprintf(mhdd.debug, "move_file: end, code=%d\n", ret);
+  mhdd_debug(MHDD_MSG, "move_file: end, code=%d\n", ret);
   free(to);
   free(from);
   return ret;
@@ -390,7 +389,7 @@ char * create_path(const char *dir, const char * file)
   plen=strlen(path);
   if (plen>1 && path[plen-1]=='/') path[plen-1]=0;
 
-/*   fprintf(mhdd.debug, "create_path: %s\n", path); */
+  mhdd_debug(MHDD_DEBUG, "create_path: %s\n", path);
   return(path);
 }
 

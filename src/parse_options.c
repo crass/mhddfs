@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <stdlib.h>
 
-#include <time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -30,10 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parse_options.h"
 #include "usage.h"
 #include "version.h"
-
+#include "debug.h"
 
 #define MLIMIT_OPTION   "mlimit="
-#define DEBUG_OPTION    "logfile="
+#define LOGFILE_OPTION  "logfile="
+#define LOG_LEVEL       "loglevel="
 
 struct mhdd_config mhdd={0};
 
@@ -95,7 +95,6 @@ void parse_options(int * pargc, char *argv[])
   char **opts;
 
   mhdd.move_limit=4ll*1024*1024*1024;
-  mhdd.debug=stderr;
   
   // parse command-line
   for(i=0; (opt=getopt(argc, argv, "sVho:"))!=-1; i++)
@@ -157,11 +156,18 @@ void parse_options(int * pargc, char *argv[])
           }
 
 
-          // debug=
-          if (strstr(opts[i], DEBUG_OPTION)==opts[i])
+          // logfile=
+          if (strstr(opts[i], LOGFILE_OPTION)==opts[i])
           {
-            remove_option(optarg, DEBUG_OPTION);
             mhdd.debug_file=strdup(value);
+            remove_option(optarg, LOGFILE_OPTION);
+          }
+
+          // loglevel
+          if (strstr(opts[i], LOG_LEVEL)==opts[i])
+          {
+            debug_level=atoi(value);
+            remove_option(optarg, LOG_LEVEL);
           }
           free(opts[i]);
         }
@@ -272,14 +278,6 @@ void parse_options(int * pargc, char *argv[])
     setvbuf(mhdd.debug, NULL, _IONBF, 0);
   }
 
-  char tstr[64];
-  time_t t=time(0);
-  struct tm *lt;
-  lt=localtime(&t);
-  strftime(tstr, 64, "%Y-%m-%d %H:%M:%S", lt);
-  fprintf(mhdd.debug, "\nmhddfs: >> started at %s <<\n", tstr);
-
+  mhdd_debug(MHDD_MSG, " >>>>> mhdd " VERSION " started <<<<<\n");
   *pargc=argc;
-
-/*   for (i=0; i<argc; i++) fprintf(stderr, "argv[%d]=%s\n", i, argv[i]); */
 }

@@ -7,6 +7,11 @@ with an "-o option" you can specify some additional options:
 -o logfile=/path/to/file.log  
 	specify a file that will contain debug information.
 
+-o loglevel=x
+  0 - debug messages
+  1 - info messages
+  2 - standart (default) messages
+
 -o mlimit=size[m|k|g]
 
 	a free space size threshold

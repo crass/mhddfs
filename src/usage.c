@@ -36,6 +36,10 @@ void usage(FILE * to)
     "          but 100Mb at least.\n"
     "  logfile=/path/to/file  -  path to a file where the logs\n"
     "          will be stored.\n"
+    "  loglevel=x - level for log-messages:\n"
+    "                0 - debug\n"
+    "                1 - info\n"
+    "                2 - default messages\n"
     "\n"
     " see fusermount(1) for information about other options\n"
     "";

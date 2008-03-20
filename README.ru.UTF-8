@@ -12,6 +12,12 @@ fusermount -u /path/to/mount
   - имя файла куда будет сохраняться отладочная информация
   о процессе работы.
 
+-o loglevel=x
+  - уровень сообщений в log-файл
+  0 - debug messages
+  1 - info messages
+  2 - standart (default) messages
+
 -o mlimit=size[m|k|g]
   - пороговый размер свободного места.
   если на диске места меньше чем это значение, то для создания нового

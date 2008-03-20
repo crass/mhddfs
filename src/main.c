@@ -33,10 +33,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parse_options.h"
 #include "tools.h"
 
+#include "debug.h"
+
 // getattr
 static int mhdd_stat(const char *file_name, struct stat *buf)
 {
-  fprintf(mhdd.debug, "mhdd_stat: %s\n", file_name);
+  mhdd_debug(MHDD_MSG, "mhdd_stat: %s\n", file_name);
   char *path=find_path(file_name);
   if (path)
   {
@@ -55,7 +57,7 @@ static int mhdd_statfs(const char *path, struct statvfs *buf)
   int i;
   struct statvfs * stats;
 
-  fprintf(mhdd.debug, "mhdd_statfs: %s\n", path);
+  mhdd_debug(MHDD_MSG, "mhdd_statfs: %s\n", path);
 
   stats=calloc(mhdd.cdirs, sizeof(struct statvfs));
 
@@ -72,9 +74,6 @@ static int mhdd_statfs(const char *path, struct statvfs *buf)
   unsigned long 
     min_block=stats[0].f_bsize,
     min_frame=stats[0].f_frsize;
-
-/*   fprintf(mhdd.debug, "bs fs min/max: %lu/%lu %lu/%lu\n", */
-/*     min_block, max_block, min_frame, max_frame); */
 
   for (i=1; i<mhdd.cdirs; i++)
   {
@@ -128,7 +127,7 @@ static int mhdd_readdir(
 {
   int i, j;
   
-  fprintf(mhdd.debug, "mhdd_readdir: %s\n", dirname);
+  mhdd_debug(MHDD_MSG, "mhdd_readdir: %s\n", dirname);
   char **dirs=(char **)calloc(mhdd.cdirs+1, sizeof(char *));
   
   struct dir_item
@@ -216,7 +215,7 @@ static int mhdd_readdir(
 // readlink
 static int mhdd_readlink(const char *path, char *buf, size_t size)
 {
-  fprintf(mhdd.debug, "mhdd_readlink: %s, size=%d\n", path, size);
+  mhdd_debug(MHDD_MSG, "mhdd_readlink: %s, size=%d\n", path, size);
 
   char *link=find_path(path);
   if (link)
@@ -234,7 +233,8 @@ static int mhdd_readlink(const char *path, char *buf, size_t size)
 static int mhdd_internal_open(const char *file,
   mode_t mode, struct fuse_file_info *fi, int what)
 {
-  fprintf(mhdd.debug, "mhdd_internal_open: %s, flags=0x%X\n", file, fi->flags);
+  mhdd_debug(MHDD_INFO, 
+    "mhdd_internal_open: %s, flags=0x%X\n", file, fi->flags);
   int dir_id, fd;
 
   char *parent, *path=find_path(file);
@@ -266,11 +266,7 @@ static int mhdd_internal_open(const char *file,
   if (fd==-1)
   {
     free(path);
-    if (errno!=ENOSPC)
-    {
-      fprintf(mhdd.debug, "mhdd_internal_open: >>> test\n");
-      return -errno;
-    }
+    if (errno!=ENOSPC) return -errno;
     
     int new_dir_id=get_free_dir();
     if (new_dir_id==dir_id) { errno=ENOSPC; return -errno; }
@@ -290,27 +286,27 @@ static int mhdd_internal_open(const char *file,
 static int mhdd_create(const char *file, 
   mode_t mode, struct fuse_file_info *fi)
 {
-  fprintf(mhdd.debug, "mhdd_create: %s, mode=%X\n", file, fi->flags);
+  mhdd_debug(MHDD_MSG, "mhdd_create: %s, mode=%X\n", file, fi->flags);
   return mhdd_internal_open(file, mode, fi, CREATE_FUNCTION);
 }
 
 // open
 static int mhdd_fileopen(const char *file, struct fuse_file_info *fi)
 {
-  fprintf(mhdd.debug, "mhdd_fileopen: %s, flags=%04X\n", file, fi->flags);
+  mhdd_debug(MHDD_MSG, "mhdd_fileopen: %s, flags=%04X\n", file, fi->flags);
   return mhdd_internal_open(file, 0, fi, OPEN_FUNCION);
 }
 
 // close
 static int mhdd_release(const char *path, struct fuse_file_info *fi)
 {
-  fprintf(mhdd.debug, "mhdd_release: %s, handle=%lld\n", path, fi->fh);
+  mhdd_debug(MHDD_MSG, "mhdd_release: %s, handle=%lld\n", path, fi->fh);
 
   lock_files();
   struct files_info *del=get_info_by_id(fi->fh);
   if (!del)
   {
-    fprintf(mhdd.debug, "mhdd_release: unknown file number: %llu\n", fi->fh);
+    mhdd_debug(MHDD_INFO, "mhdd_release: unknown file number: %llu\n", fi->fh);
     errno=EBADF;
     unlock_files();
     return -errno;
@@ -331,7 +327,7 @@ static int mhdd_read(const char *path, char *buf, size_t count, off_t offset,
   ssize_t res;
   lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
-/*   fprintf(mhdd.debug, "mhdd_read: %s, handle=%lld\n", path, fi->fh); */
+  mhdd_debug(MHDD_INFO, "mhdd_read: %s, handle=%lld\n", path, fi->fh);
 
   if (!info)
   {
@@ -356,7 +352,7 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
   ssize_t res;
   lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
-/*   fprintf(mhdd.debug, "mhdd_write: %s, handle=%lld\n", path, fi->fh); */
+  mhdd_debug(MHDD_INFO, "mhdd_write: %s, handle=%lld\n", path, fi->fh);
 
   if (!info)
   {
@@ -380,8 +376,8 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
         pthread_mutex_unlock(&info->lock);
         if (res==-1) 
         {
-/*           fprintf(mhdd.debug, "mhdd_write: error restart write: %s\n", */
-/*             strerror(errno)); */
+          mhdd_debug(MHDD_DEBUG, "mhdd_write: error restart write: %s\n",
+            strerror(errno));
           return -errno;
         }
         return res;
@@ -399,7 +395,7 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
 static int mhdd_truncate(const char *path, off_t size)
 {
   char *file=find_path(path);
-  fprintf(mhdd.debug, "mhdd_truncate: %s\n", path);
+  mhdd_debug(MHDD_MSG, "mhdd_truncate: %s\n", path);
   if (file)
   {
     int res=truncate(file, size);
@@ -418,7 +414,7 @@ static int mhdd_ftruncate(const char *path, off_t size,
   int res;
   lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
-  fprintf(mhdd.debug, "mhdd_ftruncate: %s, handle=%lld\n", path, fi->fh);
+  mhdd_debug(MHDD_MSG, "mhdd_ftruncate: %s, handle=%lld\n", path, fi->fh);
 
   if (!info)
   {
@@ -437,7 +433,7 @@ static int mhdd_ftruncate(const char *path, off_t size,
 // access
 static int mhdd_access(const char *path, int mask)
 {
-  fprintf(mhdd.debug, "mhdd_access: %s mode=%04X\n", path, mask);
+  mhdd_debug(MHDD_MSG, "mhdd_access: %s mode=%04X\n", path, mask);
   char *file=find_path(path);
   if (file)
   {
@@ -454,7 +450,7 @@ static int mhdd_access(const char *path, int mask)
 // mkdir
 static int mhdd_mkdir(const char * path, mode_t mode)
 {
-  fprintf(mhdd.debug, "mhdd_mkdir: %s mode=%04X\n", path, mode);
+  mhdd_debug(MHDD_MSG, "mhdd_mkdir: %s mode=%04X\n", path, mode);
   char *parent=strdup(path);
   int len=strlen(parent);
   if (len && parent[len-1]=='/') parent[--len]=0;
@@ -482,7 +478,7 @@ static int mhdd_mkdir(const char * path, mode_t mode)
     {
       if (errno==ENOSPC)
       {
-        fprintf(mhdd.debug, "mhdd_mkdir: %s, change hdd\n", strerror(errno));
+        mhdd_debug(MHDD_INFO, "mhdd_mkdir: %s, change hdd\n", strerror(errno));
         int dir_id=get_free_dir();
         create_parent_dirs(dir_id, path);
         object=create_path(mhdd.dirs[dir_id], path);
@@ -502,7 +498,7 @@ static int mhdd_mkdir(const char * path, mode_t mode)
 // rmdir
 static int mhdd_rmdir(const char * path)
 {
-  fprintf(mhdd.debug, "mhdd_rmdir: %s\n", path);
+  mhdd_debug(MHDD_MSG, "mhdd_rmdir: %s\n", path);
   char *dir;
   while((dir=find_path(path)))
   {
@@ -516,7 +512,7 @@ static int mhdd_rmdir(const char * path)
 // unlink
 static int mhdd_unlink(const char *path)
 {
-  fprintf(mhdd.debug, "mhdd_unlink: %s\n", path);
+  mhdd_debug(MHDD_MSG, "mhdd_unlink: %s\n", path);
   char *file=find_path(path);
   if (!file)
   {
@@ -532,7 +528,7 @@ static int mhdd_unlink(const char *path)
 // rename
 static int mhdd_rename(const char *from, const char *to)
 {
-  fprintf(mhdd.debug, "mhdd_rename: from=%s to=%s\n", from, to);
+  mhdd_debug(MHDD_MSG, "mhdd_rename: from=%s to=%s\n", from, to);
   int from_dir_id=find_path_id(from);
 
   if (from_dir_id==-1)
@@ -580,7 +576,7 @@ static int mhdd_rename(const char *from, const char *to)
 // .utimens
 static int mhdd_utimens(const char *path, const struct timespec ts[2])
 {
-  fprintf(mhdd.debug, "mhdd_utimens: %s\n", path);
+  mhdd_debug(MHDD_MSG, "mhdd_utimens: %s\n", path);
   int i, res, flag_found;
 
   for (i=flag_found=0; i<mhdd.cdirs; i++)
@@ -609,7 +605,7 @@ static int mhdd_utimens(const char *path, const struct timespec ts[2])
 // .chmod
 static int mhdd_chmod(const char *path, mode_t mode)
 {
-  fprintf(mhdd.debug, "mhdd_chmod: mode=0x%03X %s\n", mode, path);
+  mhdd_debug(MHDD_MSG, "mhdd_chmod: mode=0x%03X %s\n", mode, path);
   int i, res, flag_found;
 
   for (i=flag_found=0; i<mhdd.cdirs; i++)
@@ -631,7 +627,7 @@ static int mhdd_chmod(const char *path, mode_t mode)
 // chown
 static int mhdd_chown(const char *path, uid_t uid, gid_t gid)
 {
-  fprintf(mhdd.debug, "mhdd_chown: pid=0x%03X gid=%03X %s\n", uid, gid, path);
+  mhdd_debug(MHDD_MSG, "mhdd_chown: pid=0x%03X gid=%03X %s\n", uid, gid, path);
   int i, res, flag_found;
 
   for (i=flag_found=0; i<mhdd.cdirs; i++)
@@ -653,7 +649,7 @@ static int mhdd_chown(const char *path, uid_t uid, gid_t gid)
 // symlink
 static int mhdd_symlink(const char *from, const char *to)
 {
-  fprintf(mhdd.debug, "mhdd_symlink: from=%s to=%s\n", from, to);
+  mhdd_debug(MHDD_MSG, "mhdd_symlink: from=%s to=%s\n", from, to);
   int i, res;
   char *parent=get_parent_path(to);
   if (!parent) 
@@ -692,7 +688,7 @@ static int mhdd_symlink(const char *from, const char *to)
 // mknod
 static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
 {
-  fprintf(mhdd.debug, "mhdd_mknod: path=%s mode=%X\n", path, mode);
+  mhdd_debug(MHDD_MSG, "mhdd_mknod: path=%s mode=%X\n", path, mode);
   int res, i;
   char *nod;
 
@@ -738,7 +734,7 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
 static int mhdd_fsync(const char *path, int isdatasync, 
   struct fuse_file_info *fi)
 {
-  fprintf(mhdd.debug, "mhdd_fsync: path=%s handle=%llu\n", path, fi->fh);
+  mhdd_debug(MHDD_MSG, "mhdd_fsync: path=%s handle=%llu\n", path, fi->fh);
   lock_files();
   struct files_info *info=get_info_by_id(fi->fh);
   int res;
