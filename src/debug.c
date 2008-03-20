@@ -8,7 +8,7 @@ int debug_level=MHDD_DEFAULT_DEBUG_LEVEL;
 
 int mhdd_debug(int level, const char *fmt, ...)
 {
-  if (level<=debug_level) return 0;
+  if (level<debug_level) return 0;
   if (!mhdd.debug) return 0;
   
   char tstr[64];
