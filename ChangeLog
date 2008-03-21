@@ -16,3 +16,6 @@
 
 0.1.4
 * Added man page
+
+0.1.5
+* created objects belong creates (was mount-user) (if mount-user ==root)
