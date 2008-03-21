@@ -1,32 +1,31 @@
 .TH mhddfs "1" "February 2008"
 .SH NAME
-mhddfs \- The driver combines a several mount points into the single one
+mhddfs \- The driver combines a several mount points into the single one.
 .SH SYNOPSIS
- mhddfs /path/to/dir1,/path/to/dir2[,/path/to/dir3] /path/to/mount
+ mhddfs /dir1,/dir2[,/path/to/dir3] /path/to/mount [-o options]
  ...
  fusermount \-u /path/to/mount
 .SS fstab record example:
 mhddfs#/path/to/dir1,/path/to/dir2 /mnt/point fuse defaults 0 0
 
-mhddfs#/path/to/dir1,/path/to/dir2 /mnt/point fuse logfile=/var/log/mhddfs.log 0 0
+mhddfs#/dir1,/dir2,/dir3 /mnt fuse logfile=/var/log/mhddfs.log 0 0
 
 .SH OPTIONS
 
-with an "\-o option1,option2..." you can specify some additional options:
+with an 
+.B "\-o option1,option2..."
+you can specify some additional options:
 
 .SS logfile=/path/to/file.log  
 specify a file that will contain debug information.
 
 .SS loglevel=x
-.RS
 0 \- debug messages
 
 1 \- info messages
 
 2 \- standard (default) messages
-.RE
 .SS mlimit=size[m|k|g]
-.RS
 a free space size threshold
 If a drive has the free space less than the threshold specifed
 then another drive will be choosen while creating a new file. 
@@ -35,6 +34,7 @@ specified then a drive containing most free space will be
 choosen.
 
 Default value is 4G, minimum value is 100M.
+
 This option accepts suffixes:
 .RS
 [mM] \- megabytes
@@ -46,8 +46,7 @@ This option accepts suffixes:
 .PP
 For an information about the additional options see output of:
 .RS
-mhddfs \-h
-.RE
+.B mhddfs \-h
 .RE
 
 .SH DESCRIPTION
@@ -73,7 +72,7 @@ free space for a file. The transferring is processed on\-the\-fly, fully
 transparent for the application that is writing. So this behaviour
 simulates a big file system.
 .PP
-.B WARNING:
+.SS WARNINGS
 The filesystems are combined must provide a possibility to
 get their parameters correctly (e.g. size of free space). Otherwise
 the writing failure can occur (but data consistency will be ok
