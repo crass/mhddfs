@@ -57,10 +57,13 @@ clean:
 	rm -fr obj $(TARGET)
 
 release_svn_thread:
-	@echo $(VERSION); sleep 3;
-	svn copy -m release-$(VERSION) \
-		http://svn.uvw.ru/mhddfs/trunk \
-		http://svn.uvw.ru/mhddfs/tags/release_$(VERSION)
+	@echo current version $(VERSION)
+	if ! svn ls http://svn.uvw.ru/mhddfs/tags| \
+		grep -q release_$(VERSION); then \
+		svn copy -m release-$(VERSION) \
+			http://svn.uvw.ru/mhddfs/trunk \
+			http://svn.uvw.ru/mhddfs/tags/release_$(VERSION); \
+	fi
 
 open_project:
 	screen -t vim vim Makefile src/* README* ChangeLog mhddfs.1
