@@ -266,7 +266,7 @@ void parse_options(int * pargc, char *argv[])
 
   if (mhdd.debug_file)
   {
-    fprintf(stderr, "Using debug file: %s\n", mhdd.debug_file);
+    fprintf(stderr, "Using debug file: %s, loglevel=%d\n", mhdd.debug_file, debug_level);
     mhdd.debug=fopen(mhdd.debug_file, "a");
     if (!mhdd.debug)
     {

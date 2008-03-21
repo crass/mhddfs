@@ -276,6 +276,13 @@ static int mhdd_internal_open(const char *file,
     else fd=open(path, fi->flags);
     if (fd==-1) { free(path); return -errno; }
   }
+
+  struct fuse_context * fcontext = fuse_get_context();
+  if (fchown(fd, fcontext->uid, fcontext->gid)!=0)
+  {
+    mhdd_debug(MHDD_INFO, "mhdd_internal_open: error: can not set owner %d:%d to %s: %s\n",
+      fcontext->uid, fcontext->gid, path, strerror(errno));
+  }
   struct files_info *add=add_file_list(file, path, fi->flags, fd);
   fi->fh=add->id;
   free(path);
@@ -287,14 +294,20 @@ static int mhdd_create(const char *file,
   mode_t mode, struct fuse_file_info *fi)
 {
   mhdd_debug(MHDD_MSG, "mhdd_create: %s, mode=%X\n", file, fi->flags);
-  return mhdd_internal_open(file, mode, fi, CREATE_FUNCTION);
+  int res=mhdd_internal_open(file, mode, fi, CREATE_FUNCTION);
+  if (res!=0)
+    mhdd_debug(MHDD_INFO, "mhdd_create: error: %s\n", strerror(-res));
+  return res;
 }
 
 // open
 static int mhdd_fileopen(const char *file, struct fuse_file_info *fi)
 {
   mhdd_debug(MHDD_MSG, "mhdd_fileopen: %s, flags=%04X\n", file, fi->flags);
-  return mhdd_internal_open(file, 0, fi, OPEN_FUNCION);
+  int res=mhdd_internal_open(file, 0, fi, OPEN_FUNCION);
+  if (res!=0)
+    mhdd_debug(MHDD_INFO, "mhdd_fileopen: error: %s\n", strerror(-res));
+  return res;
 }
 
 // close
@@ -451,47 +464,40 @@ static int mhdd_access(const char *path, int mask)
 static int mhdd_mkdir(const char * path, mode_t mode)
 {
   mhdd_debug(MHDD_MSG, "mhdd_mkdir: %s mode=%04X\n", path, mode);
-  char *parent=strdup(path);
-  int len=strlen(parent);
-  if (len && parent[len-1]=='/') parent[--len]=0;
-  while(len && parent[len-1]!='/') parent[--len]=0;
 
-  char *parent_full=find_path(parent);
-  if (parent_full)
+  char *parent=get_parent_path(path);
+  if (!parent) { errno=EFAULT; return -errno; }
+
+  int i, new_dir_id, dir_id;
+  new_dir_id=find_path_id(parent);
+  if (new_dir_id==-1) { free(parent); errno=EFAULT; return -errno; }
+
+  for (dir_id=-1, i=0; i<3; i++)
   {
-    char *npath=strdup(path);
-    int len=strlen(path);
-    if (len && npath[len-1]=='/') npath[--len]=0;
-
-    char * object=strrchr(npath, '/');
-    if (object) object++;
-    else object=npath;
-
-    object=create_path(parent_full, object);
-    free(npath);
-      
-    int res=mkdir(object, mode);
-    free(parent_full);
-    free(parent);
-    free(object);
-    if (res==-1)
+    if (new_dir_id!=dir_id && new_dir_id!=-1)
     {
-      if (errno==ENOSPC)
+      char *dir_path=create_path(mhdd.dirs[new_dir_id], path);
+      create_parent_dirs(new_dir_id, path);
+      int res=mkdir(dir_path, mode);
+      if (res==0)
       {
-        mhdd_debug(MHDD_INFO, "mhdd_mkdir: %s, change hdd\n", strerror(errno));
-        int dir_id=get_free_dir();
-        create_parent_dirs(dir_id, path);
-        object=create_path(mhdd.dirs[dir_id], path);
-        res=mkdir(object, mode);
-        free(object);
-        if (res==0) return 0;
+        struct fuse_context * fcontext = fuse_get_context();
+        chown(dir_path, fcontext->uid, fcontext->gid);
+        free(dir_path);
+        free(parent);
+        return 0;
       }
-      return -errno;
+      free(dir_path);
+      if (errno!=ENOSPC) { free(parent); return -errno; }
     }
-    return 0;
+    dir_id=new_dir_id;
+    switch(i)
+    {
+      case 0: new_dir_id=get_free_dir_by_path(parent); break;
+      case 1: new_dir_id=get_free_dir(); break;
+    }
   }
   free(parent);
-  errno=EFAULT;
   return -errno;
 }
 
@@ -723,8 +729,14 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
       if (res >= 0) res = close(res);
     } else if (S_ISFIFO(mode)) res = mkfifo(nod, mode);
     else  res = mknod(nod, mode, rdev);
+    if (res!=-1)
+    {
+      struct fuse_context * fcontext = fuse_get_context();
+      chown(nod, fcontext->uid, fcontext->gid);
+      free(nod);
+      return 0;
+    }
     free(nod);
-    if (res==0) return 0;
     if (errno!=ENOSPC) return -errno;
   }
   return -errno;

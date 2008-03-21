@@ -49,7 +49,7 @@ char * create_path(const char *dir, const char * file);
 char * find_path(const char *file);
 int find_path_id(const char *file);
 
-void create_parent_dirs(int dir_id, const char *path);
+int create_parent_dirs(int dir_id, const char *path);
 
 
 // true if success

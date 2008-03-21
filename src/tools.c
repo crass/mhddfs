@@ -426,58 +426,64 @@ int find_path_id(const char *file)
 }
 
 
-void create_parent_dirs(int dir_id, const char *path)
+int create_parent_dirs(int dir_id, const char *path)
 {
-  char *parent=strdup(path);
-  int len=strlen(path);
+  mhdd_debug(MHDD_DEBUG, "create_parent_dirs: dir_id=%d, path=%s\n", dir_id, path);
+  char *parent=get_parent_path(path);
+  if (!parent) return 0;
 
-  // remove child name from path
-  if (len && parent[len-1]=='/') parent[--len]=0;
-  while(len && parent[len-1]!='/') parent[--len]=0;
-  if (len && parent[len-1]=='/') parent[--len]=0;
-  if (!len) { free(parent); return; }
+  char *exists=find_path(parent);
+  if (!exists) { free(parent); errno=EFAULT; return -errno; }
 
+
+  char *path_parent=create_path(mhdd.dirs[dir_id], parent);
   struct stat st;
 
-  char *full_path=create_path(mhdd.dirs[dir_id], parent);
-
-  // parent exists
-  if (stat(full_path, &st)==0)
+  // already exists
+  if (stat(path_parent, &st)==0)
   {
+    free(exists);
+    free(path_parent);
     free(parent);
-    free(full_path);
-    return;
+    return 0;
   }
-  free(full_path);
+  
+  // create parent dirs
+  int res=create_parent_dirs(dir_id, parent);
 
-  // path must be exists in one dirs
-  char *exists=find_path(parent);
-  if (exists) free(exists);
-  else { free(parent); return;  }
-  
-  // create path
-  char *end;
-  
-  for(end=strchr(parent, '/');;end=strchr(end+1, '/'))
+  if (res!=0)
   {
-    if (end) *end=0;
-
-    exists=find_path(parent);
-    lstat(exists, &st);
-    char *fpath=create_path(mhdd.dirs[dir_id], parent);
-
-    struct stat est;
-    if (stat(fpath, &est)!=0)
-    {
-      mkdir(fpath, st.st_mode&(S_IRWXU|S_IRWXG|S_IRWXO));
-      chown(fpath, st.st_uid, st.st_gid);
-      chmod(fpath, st.st_mode);
-    }
-    free(fpath);
-
-    if (end) *end='/';
-    else break;
+    free(path_parent);
+    free(parent); 
+    free(exists); 
+    return res; 
   }
+  
+  // get stat from exists dir
+  if (stat(exists, &st)!=0)
+  {
+    free(exists);
+    free(path_parent);
+    free(parent);
+    return -errno;
+  }
+  res=mkdir(path_parent, st.st_mode);
+  if (res==0)
+  {
+    chown(path_parent, st.st_uid, st.st_gid);
+    chmod(path_parent, st.st_mode);
+  }
+  else
+  {
+    res=-errno;
+    mhdd_debug(MHDD_DEBUG, "create_parent_dirs: can not create dir %s: %s\n",
+      path_parent,
+      strerror(errno));
+  }
+  free(exists);
+  free(path_parent);
+  free(parent);
+  return res;
 }
 
 char * get_parent_path(const char * path)
