@@ -58,7 +58,8 @@ clean:
 
 release_svn_thread:
 	@echo $(VERSION); sleep 3;
-	svn copy http://svn.uvw.ru/mhddfs/trunk \
+	svn copy -m release-$(VERSION) \
+		http://svn.uvw.ru/mhddfs/trunk \
 		http://svn.uvw.ru/mhddfs/tags/release_$(VERSION)
 
 open_project:
