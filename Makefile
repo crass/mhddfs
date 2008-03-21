@@ -56,9 +56,14 @@ obj/%.o: src/%.c
 clean:
 	rm -fr obj $(TARGET)
 
+release_svn_thread:
+	@echo $(VERSION); sleep 3;
+	svn copy http://svn.uvw.ru/mhddfs/trunk \
+		http://svn.uvw.ru/mhddfs/tags/release_$(VERSION)
+
 open_project:
 	screen -t vim vim Makefile src/* README* ChangeLog mhddfs.1
 
-.PHONY: all clean open_project tarball
+.PHONY: all clean open_project tarball release_svn_thread
 
 include $(wildcard obj/*.d)
