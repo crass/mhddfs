@@ -290,30 +290,33 @@ int move_file(struct files_info * file, off_t wsize)
   char *from, *to, *buf;
   off_t size;
   FILE *input, *output;
-  int ret;
+  int ret, dir_id;
   
-  size=lseek(file->fh, 0, SEEK_END);
-  if (size==-1) return -errno;
-
+  from=file->real_name;
+  struct stat st;
+  if (stat(from, &st)!=0)
+  {
+    mhdd_debug(MHDD_MSG, "move_file: error stat %s: %s\n", from, strerror(errno));
+    return -errno;
+  }
+  size=st.st_size;
   if (size<wsize) size=wsize;
 
-  int dir_id=find_free_space(size);
-
-  if (dir_id==-1) return -1;
-  from=file->real_name;
+  if ((dir_id=find_free_space(size))==-1) return -1;
 
   create_parent_dirs(dir_id, file->name);
 
-  input=fopen(from, "r");
-
-  if (!input) { return -errno; }
+  if (!(input=fopen(from, "r"))) return -errno;
   
   to=create_path(mhdd.dirs[dir_id], file->name);
-  output=fopen(to, "w+");
-  if (!output)
+  if (!(output=fopen(to, "w+")))
   {
+    ret=-errno;
+    mhdd_debug(MHDD_MSG, "move_file: error create %s: %s\n",
+      to, strerror(errno));
     free(to);
-    return -errno;
+    fclose(input);
+    return(ret);
   }
 
   mhdd_debug(MHDD_MSG, "move_file: move %s to %s\n", from, to);
@@ -324,12 +327,13 @@ int move_file(struct files_info * file, off_t wsize)
   {
     if (size!=fwrite(buf, sizeof(char), size, output))
     {
+      mhdd_debug(MHDD_MSG, "move_file: error move data to %s: %s\n",
+        to, strerror(errno));
       fclose(output);
       fclose(input);
       free(buf);
       unlink(to);
       free(to);
-      mhdd_debug(MHDD_MSG, "move_file: error move data\n");
       return -1;
     }
   }
@@ -337,20 +341,11 @@ int move_file(struct files_info * file, off_t wsize)
 
   mhdd_debug(MHDD_MSG, "move_file: done move data\n");
   fclose(input);
+
+  // owner/group/permissions
+  fchmod(fileno(output), st.st_mode);
+  fchown(fileno(output), st.st_uid, st.st_gid);
   fclose(output);
-
-  struct stat st;
-  if (stat(to, &st)!=0)
-  {
-    mhdd_debug(MHDD_MSG, "move_file: error stat %s\n", to);
-    unlink(to);
-    free(to);
-    return -1;
-  }
-
-  // owner/group
-  chmod(to, st.st_mode);
-  chown(to, st.st_uid, st.st_gid);
 
   // time
   struct utimbuf ftime={0};
@@ -359,11 +354,10 @@ int move_file(struct files_info * file, off_t wsize)
   utime(to, &ftime);
 
   from=strdup(from);
-  ret=reopen_files(file, to);
-  
-  if (ret==0) unlink(from);
+  if ((ret=reopen_files(file, to))==0) unlink(from);
   else unlink(to);
-  mhdd_debug(MHDD_MSG, "move_file: end, code=%d\n", ret);
+  
+  mhdd_debug(MHDD_MSG, "move_file: %s -> %s: done, code=%d\n", from, to, ret);
   free(to);
   free(from);
   return ret;
