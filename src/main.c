@@ -125,7 +125,7 @@ static int mhdd_readdir(
   off_t offset,
   struct fuse_file_info * fi)
 {
-  int i, j;
+  int i, j, found;
   
   mhdd_debug(MHDD_MSG, "mhdd_readdir: %s\n", dirname);
   char **dirs=(char **)calloc(mhdd.cdirs+1, sizeof(char *));
@@ -141,11 +141,12 @@ static int mhdd_readdir(
   struct stat st;
 
   // find all dirs
-  for(i=j=0; i<mhdd.cdirs; i++)
+  for(i=j=found=0; i<mhdd.cdirs; i++)
   {
     char *path=create_path(mhdd.dirs[i], dirname);
     if (stat(path, &st)==0)
     {
+      found++;
       if (S_ISDIR(st.st_mode))
       {
         dirs[j]=path;
@@ -154,6 +155,15 @@ static int mhdd_readdir(
       }
     }
     free(path);
+  }
+
+  // dirs not found
+  if (dirs[0]==0)
+  {
+    errno=ENOENT;
+    if (found) errno=ENOTDIR;
+    free(dirs);
+    return -errno;
   }
 
   // read directories
