@@ -230,6 +230,7 @@ static int mhdd_readlink(const char *path, char *buf, size_t size)
   char *link=find_path(path);
   if (link)
   {
+    memset(buf, 0, size);
     int res=readlink(link, buf, size);
     free(link);
     if (res>=0) return 0;
