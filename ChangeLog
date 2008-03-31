@@ -21,3 +21,6 @@
 
 0.1.6
 * fix permissions after move files.
+
+0.1.7
+* fix readlink function
