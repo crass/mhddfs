@@ -25,248 +25,153 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <stddef.h>
+#include <fuse.h>
+
 
 #include "parse_options.h"
 #include "usage.h"
 #include "version.h"
 #include "debug.h"
+#include "tools.h"
 
 #define MLIMIT_OPTION   "mlimit="
 #define LOGFILE_OPTION  "logfile="
 #define LOG_LEVEL       "loglevel="
 
+
 struct mhdd_config mhdd={0};
 
-static void remove_option(char * optarg, const char * optname)
+#define MHDDFS_OPT(t, p, v) { t, offsetof(struct mhdd_config, p), v }
+
+static struct fuse_opt mhddfs_opts[]={
+    MHDDFS_OPT("mlimit=%s",   mlimit_str, 0),
+    MHDDFS_OPT("logfile=%s",  debug_file, 0),
+    MHDDFS_OPT("loglevel=%d", loglevel,   0),
+   
+    FUSE_OPT_END
+};
+
+static int mhddfs_opt_proc(void *data, 
+  const char *arg, int key, struct fuse_args *outargs)
 {
-  char *begin, *end;
-  while((begin=strstr(optarg, optname)))
+  switch(key)
   {
-    if ((end=strchr(begin, ',')))
-    {
-      end++;
-      strcpy(begin, end);
-    }
-    else
-    {
-      *begin=0;
-      if (begin>optarg) 
+    case FUSE_OPT_KEY_NONOPT:
+      if (!mhdd.dirs)
       {
-        begin--;
-        *begin=0;
+        int count, i;
+        char *argcopy=strdup(arg);
+        char * next;
+        for(next=argcopy, count=0; next; next=strchr(next+1, ','))
+          count++;
+        if (count==1) usage(stderr);
+
+        mhdd.cdirs=count;
+        mhdd.dirs=calloc(count+1, sizeof(char *));
+        for(next=argcopy, i=0; next; next=strchr(next, ','))
+        {
+          if (*next==',') { *next=0; next++; }
+          mhdd.dirs[i]=next;
+          i++;
+        }
+
+        for(i=count=0; i<mhdd.cdirs; i++)
+        {
+          if (mhdd.dirs[i][0]=='/')
+            mhdd.dirs[i]=strdup(mhdd.dirs[i]);
+          else
+          {
+            char cpwd[PATH_MAX+1];
+            getcwd(cpwd, PATH_MAX);
+            mhdd.dirs[i]=create_path(cpwd, mhdd.dirs[i]);
+          }
+          count+=strlen(mhdd.dirs[i]);
+          count++; // ';'
+        }
+        
+        free(argcopy);
+
+        count+=sizeof("-osubtype=mhddfs,fsname=");
+        argcopy=calloc(count+2, sizeof(char *));
+
+#if FUSE_VERSION >= 27
+        strcpy(argcopy, "-osubtype=mhddfs,fsname=");
+#else
+        strcpy(argcopy, "-ofsname=sshfs#");
+#endif
+        for(i=0; i<mhdd.cdirs; i++)
+        {
+          if (i) strcat(argcopy, ";");
+          strcat(argcopy, mhdd.dirs[i]);
+        }
+        fuse_opt_insert_arg(outargs, 1, argcopy);
+        free(argcopy);
+        return 0;
       }
-    }
-  }
-}
 
-static char** extract_options(const char * optarg)
-{
-  int count, i;
-  char *temp, *end, **opts;
-
-  while(*optarg==',') optarg++;
-  
-  char *optstr=strdup(optarg);
-
-  for (count=0, temp=optstr; temp; temp=strchr(temp+1, ',')) count++;
-
-  opts=(char **)calloc(count+1, sizeof(char *));
-
-  for (i=0, temp=optstr; temp && i<count; i++)
-  {
-    opts[i]=strdup(temp);
-    if ((end=strchr(opts[i], ','))) *end=0;
-
-    temp=strchr(temp, ',');
-    if (temp) temp++;
-
-    fprintf(stderr, "option: %s (%d)\n", opts[i], count);
-  }
-
-  return opts;
-
-}
-
-void parse_options(int * pargc, char *argv[])
-{
-  int argc=*pargc;
-  int opt, count, i;
-  char *tmp, *value;
-  char **opts;
-
-  mhdd.move_limit=4ll*1024*1024*1024;
-  
-  // parse command-line
-  for(i=0; (opt=getopt(argc, argv, "sVho:"))!=-1; i++)
-  {
-    switch(opt)
-    {
-      case 's':
-        break;
-
-      case 'V':
-        printf("mhddfs: version: %s\n", VERSION);
-        exit(0);
-
-      case 'h':
-        usage(stdout);
-
-      case 'o':
-
-        opts=extract_options(optarg);
-
-        for (i=0; opts[i]; i++)
-        {
-          value=strchr(opts[i], '=');
-          if (value) value++;
-          
-          // mlimit=
-          if (strstr(opts[i], MLIMIT_OPTION)==opts[i])
-          {
-            remove_option(optarg, MLIMIT_OPTION);
-            if ((count=strlen(value)))
-            {
-              switch(value[count-1])
-              {
-                case 'm':
-                case 'M':
-                  value[count-1]=0;
-                  mhdd.move_limit=atoll(value);
-                  mhdd.move_limit*=1024*1024;
-                  break;
-                case 'g':
-                case 'G':
-                  value[count-1]=0;
-                  mhdd.move_limit=atoll(value);
-                  mhdd.move_limit*=1024*1024*1024;
-                  break;
-
-                case 'k':
-                case 'K':
-                  value[count-1]=0;
-                  mhdd.move_limit=atoll(value);
-                  mhdd.move_limit*=1024;
-                  break;
-
-                default:
-                  mhdd.move_limit=atoll(value);
-                  break;
-              }
-            }
-          }
-
-
-          // logfile=
-          if (strstr(opts[i], LOGFILE_OPTION)==opts[i])
-          {
-            mhdd.debug_file=strdup(value);
-            remove_option(optarg, LOGFILE_OPTION);
-          }
-
-          // loglevel
-          if (strstr(opts[i], LOG_LEVEL)==opts[i])
-          {
-            debug_level=atoi(value);
-            remove_option(optarg, LOG_LEVEL);
-          }
-          free(opts[i]);
-        }
-        free(opts);
-        break;
-
-
-      default: 
-        usage(stderr);
-    }
-  }
-
-  // create dirlist
-  if (argc-optind!=2) usage(stderr);
-  char * mount_dirs=argv[optind];
-  tmp=mount_dirs; count=1;
-
-  while((tmp=strchr(tmp, ','))) { count++; tmp++; }
-  if (count==1) usage(stderr);
-  
-  mhdd.dirs=(char **)calloc(count+1, sizeof(char *));
-  mhdd.cdirs=count;
-  
-  for (i=0, tmp=mount_dirs; tmp; tmp=strchr(tmp, ','), i++)
-  {
-    if (i) { *tmp=0; tmp++; }
-    mhdd.dirs[i]=tmp;
-  }
-  
-  // verify dirlist
-  for (i=0; i<count; i++)
-  {
-    struct stat info;
-    if (stat(mhdd.dirs[i], &info))
-    {
-      fprintf(stderr, "mhddfs: '%s': %s\n", 
-        mhdd.dirs[i], strerror(errno));
-      exit(-1);
-    }
-    if (S_ISDIR(info.st_mode))
-    {
-      if (mhdd.dirs[i][0]!='/')
+      if(!mhdd.mount)
       {
-        char *cpwd=(char *)calloc(PATH_MAX+1, sizeof(char));
-        getcwd(cpwd, PATH_MAX);
-        if (cpwd[strlen(cpwd)-1]=='/')
-        {
-          tmp=(char *)malloc(strlen(cpwd)+strlen(mhdd.dirs[i])+1);
-          sprintf(tmp, "%s%s", cpwd, mhdd.dirs[i]);
-          mhdd.dirs[i]=tmp;
-        }
+        if (*arg=='/')
+          mhdd.mount=strdup(arg);
         else
         {
-          tmp=(char *)malloc(strlen(cpwd)+strlen(mhdd.dirs[i])+2);
-          sprintf(tmp, "%s/%s", cpwd, mhdd.dirs[i]);
-          mhdd.dirs[i]=tmp;
+          char cpwd[PATH_MAX+1];
+          getcwd(cpwd, PATH_MAX);
+          mhdd.mount=create_path(cpwd, arg);
         }
-        free(cpwd);
+        return 1;
       }
-    }
-    else
-    {
-      fprintf(stderr, "mhddfs: '%s' - is not directory\n\n", 
-        mhdd.dirs[i]);
-      exit(-1);
-    }
+      return -1;
   }
-  
-  // remove dirlist argument from argv
-  argv[argc-2]=argv[argc-1]; argc--;
+  return 1;
+}
 
-  // if -o value is empty - remove option
-  for (i=1; i<argc; i++)
+struct fuse_args * parse_options(int argc, char *argv[])
+{
+  struct fuse_args * args=calloc(1, sizeof(struct fuse_args));
+
   {
-    if (strcmp(argv[i], "-o")==0)
+    struct fuse_args tmp=FUSE_ARGS_INIT(argc, argv);
+    memcpy(args, &tmp, sizeof(struct fuse_args));
+  }
+  
+  mhdd.loglevel=MHDD_DEFAULT_DEBUG_LEVEL;
+  if (fuse_opt_parse(args, &mhdd, mhddfs_opts, mhddfs_opt_proc)==-1) 
+    usage(stderr);
+
+  if (!mhdd.mount) usage(stderr);
+
+  if (mhdd.cdirs)
+  {
+    int i;
+    for(i=0; i<mhdd.cdirs; i++)
     {
-      if (strlen(argv[i+1])) break;
-      memmove(argv+i, argv+i+2, argc-i-2);
-      argc-=2;
-      break;
+      struct stat info;
+      if (stat(mhdd.dirs[i], &info))
+      {
+        fprintf(stderr, "mhddfs: can not stat '%s': %s\n", 
+            mhdd.dirs[i], strerror(errno));
+        exit(-1);
+      }
+      if (!S_ISDIR(info.st_mode))
+      {
+        fprintf(stderr, "mhddfs: '%s' - is not directory\n\n", 
+            mhdd.dirs[i]);
+        exit(-1);
+      }
+
+      fprintf(stderr, "mhddfs: directory '%s' added to list\n",
+          mhdd.dirs[i]);
     }
   }
 
-  if (mhdd.move_limit<100*1024*1024)
-    mhdd.move_limit=100*1024*1024;
-
-  mhdd.mount=argv[argc-1];
-  for (i=0; i<mhdd.cdirs; i++)
-    fprintf(stderr, "mhddfs: directory '%s' added to list\n",
-      mhdd.dirs[i]);
-  fprintf(stderr, "mhddfs: move size limit %lld bytes\n",
-    (long long)mhdd.move_limit);
-  fprintf(stderr, "mhddfs: mount point '%s'\n", mhdd.mount);
-
-  
+  fprintf(stderr, "mhddfs: mount to: %s\n", mhdd.mount);
 
   if (mhdd.debug_file)
   {
-    fprintf(stderr, "Using debug file: %s, loglevel=%d\n", mhdd.debug_file, debug_level);
+    fprintf(stderr, "mhddfs: using debug file: %s, loglevel=%d\n",
+      mhdd.debug_file, mhdd.loglevel);
     mhdd.debug=fopen(mhdd.debug_file, "a");
     if (!mhdd.debug)
     {
@@ -278,6 +183,45 @@ void parse_options(int * pargc, char *argv[])
     setvbuf(mhdd.debug, NULL, _IONBF, 0);
   }
 
+  mhdd.move_limit=4ll*1024*1024*1024;
+  if (mhdd.mlimit_str)
+  {
+    int len=strlen(mhdd.mlimit_str);
+    if (len)
+    {
+      switch(mhdd.mlimit_str[len-1])
+      {
+        case 'm':
+        case 'M':
+          mhdd.mlimit_str[len-1]=0;
+          mhdd.move_limit=atoll(mhdd.mlimit_str);
+          mhdd.move_limit*=1024*1024;
+          break;
+        case 'g':
+        case 'G':
+          mhdd.mlimit_str[len-1]=0;
+          mhdd.move_limit=atoll(mhdd.mlimit_str);
+          mhdd.move_limit*=1024*1024*1024;
+          break;
+
+        case 'k':
+        case 'K':
+          mhdd.mlimit_str[len-1]=0;
+          mhdd.move_limit=atoll(mhdd.mlimit_str);
+          mhdd.move_limit*=1024;
+          break;
+
+        default:
+          mhdd.move_limit=atoll(mhdd.mlimit_str);
+          break;
+      }
+    }
+    if (mhdd.move_limit<100*1024*1024) mhdd.move_limit=100*1024*1024;
+  }
+  fprintf(stderr, "mhddfs: move size limit %lld bytes\n",
+    (long long)mhdd.move_limit);
+
   mhdd_debug(MHDD_MSG, " >>>>> mhdd " VERSION " started <<<<<\n");
-  *pargc=argc;
+
+  return args;
 }

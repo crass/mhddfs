@@ -10,6 +10,4 @@
 
 int mhdd_debug(int level, const char *fmt, ...);
 
-extern int debug_level;
-
 #endif

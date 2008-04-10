@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 #include <sys/types.h>
+#include <fuse.h>
 
 struct mhdd_config
 {
@@ -33,10 +34,14 @@ struct mhdd_config
 
   FILE  *debug;
   char  *debug_file;
+
+  char  *mlimit_str;  // mlimit string
+
+  int   loglevel;
 };
 
 extern struct mhdd_config mhdd;
 
-void parse_options(int * argc, char *argv[]);
+struct fuse_args * parse_options(int argc, char *argv[]);
 
 #endif

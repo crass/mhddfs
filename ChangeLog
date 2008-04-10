@@ -23,4 +23,7 @@
 * fix permissions after move files.
 
 0.1.7
-* fix readlink function
+* fix readlink function.
+
+0.1.8
+* Parse the command line using the fuse-lib.
