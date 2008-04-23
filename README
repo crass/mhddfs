@@ -147,6 +147,12 @@ To checkout SVN files run:
 
 svn co http://svn.uvw.ru/mhddfs/trunk mhddfs
 
+BUGS
+~~~~
+Please use Debian-BTS as the bugtracking system.
+Feel free to submit a bug information to the Debian bugtracker 
+for mhddfs project. See the additional information here:
+http://www.debian.org/Bugs
 
 COPYRIGHT
 ~~~~~~~~~
