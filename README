@@ -1,5 +1,6 @@
 The driver combines a several mount points into the single one.
 
+
 Using
 ~~~~~
 mhddfs /path/to/dir1,/path/to/dir2[,/path/to/dir3] /path/to/mount
