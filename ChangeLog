@@ -27,3 +27,6 @@
 
 0.1.8
 * Parse the command line using the fuse-lib.
+
+0.1.9
+* New files are created only on a partition with enough space

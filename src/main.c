@@ -248,7 +248,7 @@ static int mhdd_internal_open(const char *file,
     "mhdd_internal_open: %s, flags=0x%X\n", file, fi->flags);
   int dir_id, fd;
 
-  char *parent, *path=find_path(file);
+  char *path=find_path(file);
 
   if (path)
   {
@@ -261,15 +261,9 @@ static int mhdd_internal_open(const char *file,
     return 0;
   }
   
-  parent=get_parent_path(file);
-  if (!parent) { errno=ENOTDIR; return -errno; }
-
-  dir_id=get_free_dir_by_path(parent);
-  free(parent);
-
-  if (dir_id==-1) { errno=ENOTDIR; return -errno; }
-  
+  dir_id=get_free_dir();
   path=create_path(mhdd.dirs[dir_id], file);
+  create_parent_dirs(dir_id, path);
 
   if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
   else fd=open(path, fi->flags);
@@ -277,21 +271,16 @@ static int mhdd_internal_open(const char *file,
   if (fd==-1)
   {
     free(path);
-    if (errno!=ENOSPC) return -errno;
-    
-    int new_dir_id=get_free_dir();
-    if (new_dir_id==dir_id) { errno=ENOSPC; return -errno; }
-    path=create_path(mhdd.dirs[new_dir_id], file);
-    create_parent_dirs(new_dir_id, path);
-    if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
-    else fd=open(path, fi->flags);
-    if (fd==-1) { free(path); return -errno; }
+    return -errno;
   }
+
+  if (getuid()!=0) return 0;
 
   struct fuse_context * fcontext = fuse_get_context();
   if (fchown(fd, fcontext->uid, fcontext->gid)!=0)
   {
-    mhdd_debug(MHDD_INFO, "mhdd_internal_open: error: can not set owner %d:%d to %s: %s\n",
+    mhdd_debug(MHDD_INFO, "mhdd_internal_open: error: "
+      "can not set owner %d:%d to %s: %s\n",
       (int)fcontext->uid, (int)fcontext->gid, path, strerror(errno));
   }
   struct files_info *add=add_file_list(file, path, fi->flags, fd);

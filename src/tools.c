@@ -214,7 +214,7 @@ static int find_free_space(off_t size)
 
     if (space>size+mhdd.move_limit) return i;
 
-    if (space>size)
+    if (space>size && (max<0 || max_space<space))
     {
       max_space=space;
       max=i;
