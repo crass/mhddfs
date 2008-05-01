@@ -262,8 +262,8 @@ static int mhdd_internal_open(const char *file,
   }
   
   dir_id=get_free_dir();
+  create_parent_dirs(dir_id, file);
   path=create_path(mhdd.dirs[dir_id], file);
-  create_parent_dirs(dir_id, path);
 
   if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
   else fd=open(path, fi->flags);
