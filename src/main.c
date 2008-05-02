@@ -482,8 +482,11 @@ static int mhdd_mkdir(const char * path, mode_t mode)
       int res=mkdir(dir_path, mode);
       if (res==0)
       {
-        struct fuse_context * fcontext = fuse_get_context();
-        chown(dir_path, fcontext->uid, fcontext->gid);
+        if (getuid()==0)
+        {
+          struct fuse_context * fcontext = fuse_get_context();
+          chown(dir_path, fcontext->uid, fcontext->gid);
+        }
         free(dir_path);
         free(parent);
         return 0;
@@ -732,8 +735,11 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
     else  res = mknod(nod, mode, rdev);
     if (res!=-1)
     {
-      struct fuse_context * fcontext = fuse_get_context();
-      chown(nod, fcontext->uid, fcontext->gid);
+      if (getuid()==0)
+      {
+        struct fuse_context * fcontext = fuse_get_context();
+        chown(nod, fcontext->uid, fcontext->gid);
+      }
       free(nod);
       return 0;
     }
