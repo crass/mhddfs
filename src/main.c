@@ -274,14 +274,15 @@ static int mhdd_internal_open(const char *file,
     return -errno;
   }
 
-  if (getuid()!=0) return 0;
-
-  struct fuse_context * fcontext = fuse_get_context();
-  if (fchown(fd, fcontext->uid, fcontext->gid)!=0)
+  if (getuid()==0) 
   {
-    mhdd_debug(MHDD_INFO, "mhdd_internal_open: error: "
-      "can not set owner %d:%d to %s: %s\n",
-      (int)fcontext->uid, (int)fcontext->gid, path, strerror(errno));
+    struct fuse_context * fcontext = fuse_get_context();
+    if (fchown(fd, fcontext->uid, fcontext->gid)!=0)
+    {
+      mhdd_debug(MHDD_INFO, "mhdd_internal_open: error: "
+          "can not set owner %d:%d to %s: %s\n",
+          (int)fcontext->uid, (int)fcontext->gid, path, strerror(errno));
+    }
   }
   struct files_info *add=add_file_list(file, path, fi->flags, fd);
   fi->fh=add->id;
