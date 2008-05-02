@@ -466,42 +466,33 @@ static int mhdd_mkdir(const char * path, mode_t mode)
 {
   mhdd_debug(MHDD_MSG, "mhdd_mkdir: %s mode=%04X\n", path, mode);
 
+  if (find_path_id(path)!=-1) { errno=EEXIST; return -errno; }
+
   char *parent=get_parent_path(path);
   if (!parent) { errno=EFAULT; return -errno; }
 
-  int i, new_dir_id, dir_id;
-  new_dir_id=find_path_id(parent);
-  if (new_dir_id==-1) { free(parent); errno=EFAULT; return -errno; }
-
-  for (dir_id=-1, i=0; i<3; i++)
+  if (find_path_id(parent)==-1)
   {
-    if (new_dir_id!=dir_id && new_dir_id!=-1)
-    {
-      char *dir_path=create_path(mhdd.dirs[new_dir_id], path);
-      create_parent_dirs(new_dir_id, path);
-      int res=mkdir(dir_path, mode);
-      if (res==0)
-      {
-        if (getuid()==0)
-        {
-          struct fuse_context * fcontext = fuse_get_context();
-          chown(dir_path, fcontext->uid, fcontext->gid);
-        }
-        free(dir_path);
-        free(parent);
-        return 0;
-      }
-      free(dir_path);
-      if (errno!=ENOSPC) { free(parent); return -errno; }
-    }
-    dir_id=new_dir_id;
-    switch(i)
-    {
-      case 0: new_dir_id=get_free_dir_by_path(parent); break;
-      case 1: new_dir_id=get_free_dir(); break;
-    }
+    free(parent);
+    errno=EFAULT;
+    return -errno;
   }
   free(parent);
+
+  int dir_id=get_free_dir();
+  create_parent_dirs(dir_id, path);
+  char *name=create_path(mhdd.dirs[dir_id], path);
+  if (mkdir(name, mode)==0)
+  {
+    if (getuid()==0)
+    {
+      struct fuse_context * fcontext = fuse_get_context();
+      chown(name, fcontext->uid, fcontext->gid);
+    }
+    free(name);
+    return 0;
+  }
+  free(name);
   return -errno;
 }
 

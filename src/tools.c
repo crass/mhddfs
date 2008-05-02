@@ -167,37 +167,6 @@ int get_free_dir(void)
   return (cfg==-1)?max:cfg;
 }
 
-// get diridx for maximum free space
-int get_free_dir_by_path(const char *path)
-{
-  if (strcmp(path, "/")==0) return get_free_dir();
-
-  int i, max_id;
-  fsblkcnt_t max_space=0;
-  
-  for (max_id=-1,i=0; i<mhdd.cdirs; i++)
-  {
-    struct stat st;
-    char *dir=create_path(mhdd.dirs[i], path);
-    int ret=lstat(dir, &st);
-    free(dir);
-    if (ret!=0) continue;
-    struct statvfs stf;
-    if (statvfs(mhdd.dirs[i], &stf)==0)
-    {
-      fsblkcnt_t space  = stf.f_bsize;
-      space *= stf.f_bavail;
-
-      if (space>max_space||max_id==-1) 
-      {
-        max_space=space;
-        max_id=i;
-      }
-    }
-  }
-  return max_id;
-}
-
 // find mount point with free space > size
 // -1 if not found
 static int find_free_space(off_t size)

@@ -44,7 +44,6 @@ struct files_info * add_file_list(const char *name,
 struct files_info * get_info_by_id(uint64_t id);
 void del_file_list(struct files_info * item);
 int get_free_dir(void);
-int get_free_dir_by_path(const char *path);
 char * create_path(const char *dir, const char * file);
 char * find_path(const char *file);
 int find_path_id(const char *file);
