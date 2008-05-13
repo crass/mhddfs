@@ -18,12 +18,12 @@ with an "-o option" you can specify some additional options:
 
 -o mlimit=size[m|k|g]
 
-	a free space size threshold
-	If a drive has the free space less than the threshold specifed
-	then another drive will be choosen while creating a new file. 
-	If all the drives have free space less than the threshold
-	specified then a drive containing most free space will be
-	choosen.
+        a free space size threshold
+	If a drive has the free space  less  than  the	threshold
+	specifed  then	another  drive	will  be  choosen   while
+	creating a new file.  If all the drives have  free  space
+        less than the threshold specified then a drive containing
+        most free space will be choosen.
 
 Default value is 4G, minimum value is 100M.
 This option accepts suffixes:
@@ -31,9 +31,11 @@ This option accepts suffixes:
 [gG] - gigabytes
 [kK] - kilobytes
 
-For an information about the additional options see output of 'mhddfs -h'.
+For an information about the additional  options  see  output  of
+'mhddfs -h'.
 
-It's necessary to get installed fuse-utils, libfuse for driver working.
+It's necessary to get installed fuse-utils,  libfuse  for  driver
+working.
 
 Working
 ~~~~~~~
@@ -59,8 +61,9 @@ mhddfs /hdd1,/hdd2 /hdd_common
 
 into the specified file system point we will see a combined tree.
 
-In the united tree we can see all the directories and files. Note file2 of
-2nd hdd is not visible (because 1st hdd has the file2 already).
+In the united tree we can see all the directories and files. Note
+file2 of 2nd hdd is not visible (because 1st hdd  has  the  file2
+already).
 
 /hdd_common
 |
@@ -81,24 +84,24 @@ In the united tree we can see all the directories and files. Note file2 of
 +-- file5
 
 
-While writing files they are written to a 1st hdd until the hdd has
-the free space (see mlimit option), then they are written on a 2nd
-hdd, then to 3rd etc.
+While writing files they are written to a 1st hdd until  the  hdd
+has the free space (see mlimit option), then they are written  on
+a 2nd hdd, then to 3rd etc.
 
-df will show a total statistics of all filesystems like there is a
-big one hdd.
+df will show a total statistics of all filesystems like there  is
+a big one hdd.
 
-If an overflow arises while writing to the hdd1 then a file content
-already written will be transferred to a hdd containing enough of
-free space for a file. The transferring is processed on-the-fly, fully
-transparent for the application that is writing. So this behaviour
-simulates a big file system.
+If an overflow arises while writing  to  the  hdd1  then  a  file
+content already written will be transferred to a  hdd  containing
+enough of free space for a file.  The transferring  is	processed
+on-the-fly,  fully  transparent  for  the  application	that   is
+writing.   So  this  behaviour	simulates  a  big  file   system.
 
-WARNING: The filesystems are combined must provide a possibility to
-get their parameters correctly (e.g. size of free space). Otherwise
-the writing failure can occur (but data consistency will be ok
-anyway). For example it is a bad idea to combine a several sshfs
-systems together.
+WARNING: The filesystems are combined must provide a  possibility
+to get their parameters correctly (e.g.   size	of  free  space).
+Otherwise the writing failure can  occur  (but	data  consistency
+will be ok anyway).  For example it is a bad idea  to  combine	a
+several sshfs systems together.
 
 File system's functions
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,17 +145,18 @@ Get it
 ~~~~~~
 
 Last version of the mhddfs drivers you can get at 
-http://mhddfs.uvw.ru. SVN version is located at:
-http://svn.uvw.ru/mhddfs/trunk
+http://mhddfs.uvw.ru/downloads.
+SVN version is located at: http://svn.uvw.ru/mhddfs/trunk
 To checkout SVN files run:
 
 svn co http://svn.uvw.ru/mhddfs/trunk mhddfs
 
+
 BUGS
 ~~~~
-Please use Debian-BTS as the bugtracking system.
-Feel free to submit a bug information to the Debian bugtracker 
-for mhddfs project. See the additional information here:
+Please use Debian-BTS as the bugtracking system.   Feel  free  to
+submit a bug information to  the  Debian  bugtracker  for  mhddfs
+project. See the additional information here:
 http://www.debian.org/Bugs
 
 COPYRIGHT
