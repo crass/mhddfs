@@ -54,7 +54,7 @@ obj/%.o: src/%.c
 	gcc $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -fr obj $(TARGET)
+	rm -fr obj $(TARGET) pwrite_test
 
 release_svn_thread:
 	@echo current version $(VERSION)
@@ -67,6 +67,9 @@ release_svn_thread:
 
 open_project:
 	screen -t vim vim Makefile src/* README* ChangeLog mhddfs.1
+
+pwrite_test: src/test/pwrite.c
+	gcc -o $@ $<
 
 .PHONY: all clean open_project tarball release_svn_thread
 

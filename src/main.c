@@ -379,30 +379,36 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
   unlock_files();
 
   res=pwrite(info->fh, buf, count, offset);
-  if (res==-1)
+
+  if ((res==count)||(res==-1 && errno!=ENOSPC))
   {
-    // end free space
-    if (errno==ENOSPC)
-    {
-      if (move_file(info, offset+count)==0) 
-      {
-        res=pwrite(info->fh, buf, count, offset);
-        pthread_mutex_unlock(&info->lock);
-        if (res==-1) 
-        {
-          mhdd_debug(MHDD_DEBUG, "mhdd_write: error restart write: %s\n",
-            strerror(errno));
-          return -errno;
-        }
-        return res;
-      }
-      errno=ENOSPC;
-    }
     pthread_mutex_unlock(&info->lock);
-    return -errno;
+    return res;
   }
+
+  // end free space
+  if (move_file(info, offset+count)==0) 
+  {
+    res=pwrite(info->fh, buf, count, offset);
+    pthread_mutex_unlock(&info->lock);
+    if (res==-1) 
+    {
+      mhdd_debug(MHDD_DEBUG, "mhdd_write: error restart write: %s\n",
+        strerror(errno));
+      return -errno;
+    }
+    else if (res<count)
+    {
+      mhdd_debug(MHDD_DEBUG, 
+        "mhdd_write: error (re)write file %s %s\n",
+          info->real_name,
+          strerror(ENOSPC));
+    }
+    return res;
+  }
+  errno=ENOSPC;
   pthread_mutex_unlock(&info->lock);
-  return res;
+  return -errno;
 }
 
 // truncate

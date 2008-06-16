@@ -34,3 +34,6 @@
 0.1.10
 * call chown only if uid==0
 * New directories are created only on a partition with enough space
+
+0.1.11
+* fix detect filesystem overflow. Thanks lordikc <lordikc@free.fr>.
