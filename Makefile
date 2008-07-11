@@ -25,7 +25,9 @@ TARGET	=	mhddfs
 CFLAGS	=	-Wall $(shell pkg-config fuse --cflags) -DFUSE_USE_VERSION=26 -MMD
 LDFLAGS	=	$(shell pkg-config fuse --libs)
 
-FORTAR	=	src COPYING LICENSE README Makefile README.ru.UTF-8 ChangeLog mhddfs.1
+FORTAR	=	src COPYING LICENSE README Makefile \
+		README.ru.UTF-8 ChangeLog mhddfs.1 \
+		debian
 
 VERSION	=	$(shell cat src/version.h  \
 	|grep '^.define'|grep '[[:space:]]VERSION[[:space:]]' \
@@ -36,7 +38,7 @@ all: $(TARGET)
 tarball: mhddfs_$(VERSION).tar.gz
 	@echo '>>>> mhddfs_$(VERSION).tar.gz created'
 
-mhddfs_$(VERSION).tar.gz: $(FORTAR) $(wildcard src/*)
+mhddfs_$(VERSION).tar.gz: $(FORTAR) $(wildcard src/*) 
 	mkdir mhddfs-$(VERSION)
 	cp -r $(FORTAR) mhddfs-$(VERSION)
 	tar --exclude=.svn -czvf $@ mhddfs-$(VERSION)
