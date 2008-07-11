@@ -43,11 +43,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 struct mhdd_config mhdd={0};
 
 #define MHDDFS_OPT(t, p, v) { t, offsetof(struct mhdd_config, p), v }
+#define MHDD_VERSION_OPT 15121974
 
 static struct fuse_opt mhddfs_opts[]={
     MHDDFS_OPT("mlimit=%s",   mlimit_str, 0),
     MHDDFS_OPT("logfile=%s",  debug_file, 0),
     MHDDFS_OPT("loglevel=%d", loglevel,   0),
+
+    FUSE_OPT_KEY("-V",        MHDD_VERSION_OPT),
+    FUSE_OPT_KEY("--version", MHDD_VERSION_OPT),
    
     FUSE_OPT_END
 };
@@ -57,6 +61,10 @@ static int mhddfs_opt_proc(void *data,
 {
   switch(key)
   {
+  	case MHDD_VERSION_OPT:
+      fprintf(stderr, "mhddfs version: %s\n", VERSION);
+      exit(0);
+
     case FUSE_OPT_KEY_NONOPT:
       if (!mhdd.dirs)
       {
