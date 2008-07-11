@@ -37,3 +37,6 @@
 
 0.1.11
 * fix detect filesystem overflow. Thanks lordikc <lordikc@free.fr>.
+
+0.1.12
+* SGID-attribute works correctly

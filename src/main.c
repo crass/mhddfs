@@ -276,13 +276,14 @@ static int mhdd_internal_open(const char *file,
 
   if (getuid()==0) 
   {
-    struct fuse_context * fcontext = fuse_get_context();
-    if (fchown(fd, fcontext->uid, fcontext->gid)!=0)
+    struct stat st;
+    gid_t gid = fuse_get_context()->gid;
+    if (fstat(fd, &st)==0)
     {
-      mhdd_debug(MHDD_INFO, "mhdd_internal_open: error: "
-          "can not set owner %d:%d to %s: %s\n",
-          (int)fcontext->uid, (int)fcontext->gid, path, strerror(errno));
+    	/* parent directory is SGID'ed */
+    	if (st.st_gid!=getgid()) gid=getgid();
     }
+    fchown(fd, fuse_get_context()->uid, gid);
   }
   struct files_info *add=add_file_list(file, path, fi->flags, fd);
   fi->fh=add->id;
@@ -492,8 +493,14 @@ static int mhdd_mkdir(const char * path, mode_t mode)
   {
     if (getuid()==0)
     {
-      struct fuse_context * fcontext = fuse_get_context();
-      chown(name, fcontext->uid, fcontext->gid);
+    	struct stat st;
+    	gid_t gid = fuse_get_context()->gid;
+    	if (lstat(name, &st)==0)
+    	{
+    		/* parent directory is SGID'ed */
+    		if (st.st_gid!=getgid()) gid=getgid();
+      }
+      chown(name, fuse_get_context()->uid, gid);
     }
     free(name);
     return 0;
