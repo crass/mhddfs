@@ -281,7 +281,7 @@ static int mhdd_internal_open(const char *file,
     if (fstat(fd, &st)==0)
     {
     	/* parent directory is SGID'ed */
-    	if (st.st_gid!=getgid()) gid=getgid();
+    	if (st.st_gid!=getgid()) gid=st.st_gid;
     }
     fchown(fd, fuse_get_context()->uid, gid);
   }
@@ -498,7 +498,7 @@ static int mhdd_mkdir(const char * path, mode_t mode)
     	if (lstat(name, &st)==0)
     	{
     		/* parent directory is SGID'ed */
-    		if (st.st_gid!=getgid()) gid=getgid();
+    		if (st.st_gid!=getgid()) gid=st.st_gid;
       }
       chown(name, fuse_get_context()->uid, gid);
     }
