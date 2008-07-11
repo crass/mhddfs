@@ -1,6 +1,7 @@
 mhddfs (0.1.12-1) unstable; urgency=low
 
   * New release (Now SGID-bit works fine).
+  * Added Vcs-Browser: to debian/control.
 
  -- Dmitry E. Oboukhov <unera@debian.org>  Fri, 11 Jul 2008 23:38:18 +0400
 

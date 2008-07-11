@@ -15,6 +15,7 @@ clean:
 	dh_testdir
 	dh_testroot
 	make clean
+	rm -f build-stamp
 	dh_clean 
 
 # Build architecture-independent files here.
