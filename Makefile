@@ -46,7 +46,7 @@ mhddfs_$(VERSION).tar.gz: $(FORTAR) $(wildcard src/*)
 
 
 $(TARGET): obj/obj-stamp $(OBJ)
-	gcc $(CFLAGS) $(LDFLAGS) $(OBJ) -o $@
+	gcc $(CFLAGS) $(OBJ) -o $@ $(LDFLAGS)
 
 obj/obj-stamp:
 	mkdir -p obj
