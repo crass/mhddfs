@@ -42,3 +42,7 @@
 * SGID-attribute works correctly
 * option -V shows version of mhddfs
 
+0.1.13
+* Fix flags in Makefile (fixed build with --as-needed).
+* Added lock for debug-stream when writing debug messages
+thanks for Andrew McGill <list2008@lunch.za.net>

@@ -9,5 +9,6 @@
 
 
 int mhdd_debug(int level, const char *fmt, ...);
+void mhdd_debug_init(void);
 
 #endif

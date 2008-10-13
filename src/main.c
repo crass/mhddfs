@@ -812,6 +812,7 @@ static struct fuse_operations mhdd_oper =
 // start
 int main(int argc, char *argv[])
 {
+  mhdd_debug_init();
   struct fuse_args *args=parse_options(argc, argv);
   mhdd_tools_init();
   return fuse_main(args->argc, args->argv, &mhdd_oper, 0);

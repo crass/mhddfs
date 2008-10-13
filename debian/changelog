@@ -1,3 +1,9 @@
+mhddfs (0.1.13-1) unstable; urgency=low
+
+  * New release.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Mon, 13 Oct 2008 15:32:01 +0400
+
 mhddfs (0.1.12-1) unstable; urgency=low
 
   * New release (Now SGID-bit works fine).
