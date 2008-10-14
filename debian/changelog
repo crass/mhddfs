@@ -1,6 +1,8 @@
 mhddfs (0.1.13-1) unstable; urgency=low
 
   * New release.
+  * Fix few linker options, closes: #499380.
+  * Added lock for debug-stream when writing debug messages.
 
  -- Dmitry E. Oboukhov <unera@debian.org>  Mon, 13 Oct 2008 15:32:01 +0400
 
