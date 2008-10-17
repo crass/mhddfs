@@ -98,16 +98,9 @@ struct files_info * get_info_by_id(uint64_t id)
   {
     if (next->id==id) return next;
   }
-
-  mhdd_debug(MHDD_DEBUG, "get_info_by_id: "
-    "fileno %llu not found, fileno list:", id);
-  for (next=files; next; next=next->next)
-  {
-    mhdd_debug(MHDD_DEBUG, " %llu", next->id);
-  }
-  mhdd_debug(MHDD_DEBUG, "\n");
   return 0;
 }
+
 void mhdd_tools_init(void)
 {
   pthread_mutex_init(&files_lock, 0);
