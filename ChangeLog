@@ -51,3 +51,6 @@ thanks for Andrew McGill <list2008@lunch.za.net>
 0.1.14
 * Fix segfault on mhdd_internal_open (locks added), 
 thanks to Konstantin Zavialov <konstantin.z@gmail.com>
+
+0.1.16
+* Revert to old locks scheme.
