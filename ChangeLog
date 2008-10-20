@@ -47,3 +47,7 @@
 thanks for Vladimir V. Kamarzin <vvk@altlinux.org>
 * Added lock for debug-stream when writing debug messages
 thanks for Andrew McGill <list2008@lunch.za.net>
+
+0.1.14
+* Fix segfault on mhdd_internal_open (locks added), 
+thanks to Konstantin Zavialov <konstantin.z@gmail.com>

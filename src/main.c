@@ -255,8 +255,10 @@ static int mhdd_internal_open(const char *file,
     if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
     else fd=open(path, fi->flags);
     if (fd==-1) { free(path); return -errno; }
+    lock_files();
     struct files_info *add=add_file_list(file, path, fi->flags, fd);
     fi->fh=add->id;
+    unlock_files();
     free(path);
     return 0;
   }
@@ -285,8 +287,10 @@ static int mhdd_internal_open(const char *file,
     }
     fchown(fd, fuse_get_context()->uid, gid);
   }
+  lock_files();
   struct files_info *add=add_file_list(file, path, fi->flags, fd);
   fi->fh=add->id;
+  unlock_files();
   free(path);
   return 0;
 }

@@ -1,3 +1,9 @@
+mhddfs (0.1.14~test1-1) unstable; urgency=low
+
+  * New upstream release (fixed segfault on mhdd_fileopen).
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Mon, 20 Oct 2008 14:44:47 +0400
+
 mhddfs (0.1.13-1) unstable; urgency=low
 
   * New release.
