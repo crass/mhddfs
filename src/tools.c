@@ -67,25 +67,18 @@ struct files_info * add_file_list(const char *name,
 {
   struct files_info * add=calloc(1, sizeof(struct files_info));
 
-  lock_files();
-
   add->flags=flags;
   add->id=get_new_id();
   add->name=strdup(name);
   add->real_name=strdup(real_name);
   add->fh=fh;
   pthread_mutex_init(&add->lock, 0);
-
-  if (files)
-  {
-    files->prev=add;
-    add->next=files;
-    files=add;
-  }
-  else
-  {
-    files=add;
-  }
+  
+  lock_files();
+  
+  add->next=files;
+  if (files) files->prev=add;
+  files=add;
 
   unlock_files();
   return add;
@@ -116,17 +109,10 @@ void del_file_list(struct files_info * item)
   {
     if (next==item) 
     {
-      pthread_mutex_lock(&item->lock);
-      if (item==files)
-      {
-        if (files->next) files=files->next;
-        else files=files->prev;
-      }
-
       if (item->next) item->next->prev=item->prev;
       if (item->prev) item->prev->next=item->next;
+      if (files==item) files=item->next;
       
-      pthread_mutex_unlock(&item->lock);
       free(item->name);
       free(item->real_name);
       free(item);
