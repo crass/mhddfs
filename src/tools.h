@@ -25,13 +25,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // opened file list
 struct files_info
 {
-  pthread_mutex_t lock;
-  char        *name;
-  char        *real_name;
-  int         flags;
-  int         fh;
-  uint64_t    id;
-  struct files_info   *next, *prev;
+    pthread_mutex_t lock;
+    char        *name;
+    char        *real_name;
+    int         flags;
+    int         fh;
+    uint64_t    id;
+    struct files_info   *next, *prev;
 };
 
 extern struct files_info *files;

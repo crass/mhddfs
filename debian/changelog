@@ -1,3 +1,10 @@
+mhddfs (0.1.17-1) unstable; urgency=low
+
+  * New upstream release. Now the mount's directories can be
+    input with the help of spaces. closes: #508330.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Fri, 12 Dec 2008 22:53:44 +0300
+
 mhddfs (0.1.17~debug-1) norelease; urgency=low
 
   * Test version for find segfault.

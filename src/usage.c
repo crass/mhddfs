@@ -21,29 +21,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void usage(FILE * to)
 {
-  const char *usage=
-    "\n"
-    "Multi-hdd FUSE filesystem\n"
-    "     Copyright (C) 2008, Dmitry E. Oboukhov <dimka@avanto.org>\n"
-    "\n"
-    "Usage:\n"
-    " mhddfs dir1,dir2.. mountpoint [ -o OPTIONS ]\n"
-    "\n"
-    "OPTIONS:\n"
-    "  mlimit=xxx - limit of the disk free space (if the disk\n"
-    "          has the free space more than specified - it is\n"
-    "          considered as the empty one).  Default is  4Gb,\n"
-    "          but 100Mb at least.\n"
-    "  logfile=/path/to/file  -  path to a file where the logs\n"
-    "          will be stored.\n"
-    "  loglevel=x - level for log-messages:\n"
-    "                0 - debug\n"
-    "                1 - info\n"
-    "                2 - default messages\n"
-    "\n"
-    " see fusermount(1) for information about other options\n"
-    "";
-  fprintf(to, usage);
-  if (to==stdout) exit(0);
-  exit(-1);
+    const char *usage=
+        "\n"
+        "Multi-hdd FUSE filesystem\n"
+        "     Copyright (C) 2008, Dmitry E. Oboukhov <dimka@avanto.org>\n"
+        "\n"
+        "Usage:\n"
+        " mhddfs dir1,dir2.. mountpoint [ -o OPTIONS ]\n"
+        "\n"
+        "OPTIONS:\n"
+        "  mlimit=xxx - limit of the disk free space (if the disk\n"
+        "          has the free space more than specified - it is\n"
+        "          considered as the empty one).  Default is  4Gb,\n"
+        "          but 100Mb at least.\n"
+        "  logfile=/path/to/file  -  path to a file where the logs\n"
+        "          will be stored.\n"
+        "  loglevel=x - level for log-messages:\n"
+        "                0 - debug\n"
+        "                1 - info\n"
+        "                2 - default messages\n"
+        "\n"
+        " see fusermount(1) for information about other options\n"
+        "";
+    fprintf(to, usage);
+    if (to==stdout) exit(0);
+    exit(-1);
 }

@@ -25,19 +25,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 struct mhdd_config
 {
-  char *  mount;    // mount point
-  char ** dirs;     // dir list
+    char *  mount;    // mount point
+    char ** dirs;     // dir list
 
-  int  cdirs;       // count dirs in dirs
+    int  cdirs;       // count dirs in dirs
 
-  off_t move_limit; // no limits
+    off_t move_limit; // no limits
 
-  FILE  *debug;
-  char  *debug_file;
+    FILE  *debug;
+    char  *debug_file;
 
-  char  *mlimit_str;  // mlimit string
+    char  *mlimit_str;  // mlimit string
 
-  int   loglevel;
+    int   loglevel;
 };
 
 extern struct mhdd_config mhdd;

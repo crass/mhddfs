@@ -54,3 +54,11 @@ thanks to Konstantin Zavialov <konstantin.z@gmail.com>
 
 0.1.16
 * Revert to old locks scheme.
+
+0.1.17
+* Added standard variant for list of directories.
+ Now it works:
+ 	mhddfs /dir1 /dir2 /mount
+ and old variant works too:
+ 	mhddfs /dir1,/dir2 /mount
+* Reformatted sources.
