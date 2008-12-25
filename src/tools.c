@@ -31,96 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "debug.h"
 #include "parse_options.h"
 
-struct files_info *files=0;
-static pthread_mutex_t files_lock;
-
-static uint64_t get_new_id(void)
-{
-    static uint64_t id=0;
-    struct files_info * next;
-
-    for(id++;;id++)
-    {
-        if (!id) continue;
-        for(next=files; next; next=next->next)
-        {
-            if (next->id==id) break;
-        }
-        if (next) continue;
-        return id;
-    }
-}
-
-void lock_files(void)
-{
-    pthread_mutex_lock(&files_lock);
-}
-
-void unlock_files(void)
-{
-    pthread_mutex_unlock(&files_lock);
-}
-
-// add file to list
-struct files_info * add_file_list(const char *name, 
-        const char *real_name, int flags, int fh)
-{
-    struct files_info * add=calloc(1, sizeof(struct files_info));
-
-    add->flags=flags;
-    add->id=get_new_id();
-    add->name=strdup(name);
-    add->real_name=strdup(real_name);
-    add->fh=fh;
-    pthread_mutex_init(&add->lock, 0);
-
-    lock_files();
-
-    add->next=files;
-    if (files) files->prev=add;
-    files=add;
-
-    unlock_files();
-    return add;
-}
-
-struct files_info * get_info_by_id(uint64_t id)
-{
-    struct files_info * next;
-    for(next=files; next; next=next->next)
-    {
-        if (next->id==id) return next;
-    }
-    return 0;
-}
-
-void mhdd_tools_init(void)
-{
-    pthread_mutex_init(&files_lock, 0);
-}
-
-// delete from file list
-void del_file_list(struct files_info * item)
-{
-    struct files_info *next;
-    lock_files();
-
-    for (next=files; next; next=next->next)
-    {
-        if (next==item) 
-        {
-            if (item->next) item->next->prev=item->prev;
-            if (item->prev) item->prev->next=item->next;
-            if (files==item) files=item->next;
-
-            free(item->name);
-            free(item->real_name);
-            free(item);
-            break;
-        }
-    }
-    unlock_files();
-}
 
 // get diridx for maximum free space
 int get_free_dir(void)
@@ -171,75 +81,84 @@ static int find_free_space(off_t size)
     return max;
 }
 
-static int reopen_files(struct files_info * file, const char *new_name)
+static int reopen_files(struct flist * file, const char *new_name)
 {
-    struct files_info * next;
+	int i;
+    struct flist ** rlist;
+    
+    mhdd_debug(MHDD_INFO, "reopen_files: %s -> %s\n",
+        file->real_name, new_name);
+    rlist = flist_items_by_eq_name(file);
+    if (!rlist) return 0;
 
-    // move to top list
-    if (file!=files)
-    {
-        lock_files();
-        if (file->next) file->next->prev=file->prev;
-        if (file->prev) file->prev->next=file->next;
-        file->next=files;
-        file->prev=0;
-        files=file;
-        unlock_files();
-    }
+    int error=0;
 
-    // reopen files
-    for (next=files; next; next=next->next)
+    for (i=0; rlist[i]; i++)
     {
-        if (strcmp(next->name, file->name)!=0) continue;
+    	struct flist * next=rlist[i];
+        
         off_t seek=lseek(next->fh, 0, SEEK_CUR);
         int flags=next->flags;
-        if (flags&=~(O_EXCL|O_TRUNC));
+        int fh;
 
+        flags &= ~(O_EXCL|O_TRUNC);
 
         // open
-        int fh=open(new_name, flags);
-        if (fh==-1)
+        if ((fh=open(new_name, flags))==-1)
         {
             mhdd_debug(MHDD_INFO, "reopen_files: error reopen: %s\n",
                     strerror(errno));
-            return -errno;
+            if (!i) { error=errno; break; }
+            close(next->fh);
         }
-
-        // seek
-        if (seek!=lseek(fh, seek, SEEK_SET))
+        else
         {
-            mhdd_debug(MHDD_INFO, "reopen_files: error seek %s\n",
-                    strerror(errno));
+            // seek
+            if (seek!=lseek(fh, seek, SEEK_SET))
+            {
+                mhdd_debug(MHDD_INFO, "reopen_files: error seek %s\n",
+                        strerror(errno));
+                close(fh);
+                if (!i) { error=errno; break; }
+            }
+
+            // filehandle
+            if (dup2(fh, next->fh)!=next->fh)
+            {
+                mhdd_debug(MHDD_INFO, "reopen_files: error dup2 %s\n",
+                        strerror(errno));
+                close(fh);
+                if (!i) { error=errno; break; }
+            }
+            // close temporary filehandle
+            mhdd_debug(MHDD_MSG,
+                "reopen_files: reopened %s (to %s) old h=%x "
+                "new h=%x seek=%lld\n",
+                next->real_name, new_name, next->fh, fh, seek);
             close(fh);
-            return(-1);
         }
-
-        // filehandle
-        if (dup2(fh, next->fh)!=next->fh)
-        {
-            mhdd_debug(MHDD_INFO, "reopen_files: error dup2 %s\n",
-                    strerror(errno));
-            close(fh);
-            return(-1);
-        }
-
-        close(fh);
-        mhdd_debug(MHDD_MSG,
-            "reopen_files: file %s (to %s) old h=%x new h=%x\n",
-            next->real_name, new_name, next->fh, fh);
-
-        free(next->real_name);
-        next->real_name=strdup(new_name);
     }
+    
+    /* unlock all files exclude current */
+    for (i=0; rlist[i]; i++)
+    {
+    	if (rlist[i]==file) continue;
+        flist_unlock_file(rlist[i]);
+    }
+
+    free(rlist);
+    if (error) return -error;
     return 0;
 }
 
-int move_file(struct files_info * file, off_t wsize)
+int move_file(struct flist * file, off_t wsize)
 {
     char *from, *to, *buf;
     off_t size;
     FILE *input, *output;
     int ret, dir_id;
+
+    mhdd_debug(MHDD_MSG, "move_file: %s\n", file->real_name);
 
     from=file->real_name;
     struct stat st;
@@ -252,11 +171,15 @@ int move_file(struct files_info * file, off_t wsize)
     size=st.st_size;
     if (size<wsize) size=wsize;
 
-    if ((dir_id=find_free_space(size))==-1) return -1;
-
-    create_parent_dirs(dir_id, file->name);
+    if ((dir_id=find_free_space(size))==-1)
+    {
+    	mhdd_debug(MHDD_MSG, "move_file: can not find space\n");
+        return -1;
+    }
 
     if (!(input=fopen(from, "r"))) return -errno;
+    
+    create_parent_dirs(dir_id, file->name);
 
     to=create_path(mhdd.dirs[dir_id], file->name);
     if (!(output=fopen(to, "w+")))
@@ -304,14 +227,12 @@ int move_file(struct files_info * file, off_t wsize)
     ftime.modtime=st.st_mtime;
     utime(to, &ftime);
 
-    from=strdup(from);
     if ((ret=reopen_files(file, to))==0) unlink(from);
     else unlink(to);
 
     mhdd_debug(MHDD_MSG,
         "move_file: %s -> %s: done, code=%d\n", from, to, ret);
     free(to);
-    free(from);
     return ret;
 }
 
@@ -335,7 +256,7 @@ char * create_path(const char *dir, const char * file)
     plen=strlen(path);
     if (plen>1 && path[plen-1]=='/') path[plen-1]=0;
 
-    mhdd_debug(MHDD_DEBUG, "create_path: %s\n", path);
+/*     mhdd_debug(MHDD_DEBUG, "create_path: %s\n", path); */
     return(path);
 }
 

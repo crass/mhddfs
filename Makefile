@@ -68,11 +68,56 @@ release_svn_thread:
 	fi
 
 open_project:
-	screen -t vim vim Makefile src/* README* ChangeLog mhddfs.1
+	screen -t vim vim Makefile src/*.[ch] README* ChangeLog mhddfs.1
 
 pwrite_test: src/test/pwrite.c
 	gcc -o $@ $<
 
-.PHONY: all clean open_project tarball release_svn_thread
+images-mount: test1.img test2.img
+	mount|grep -q `pwd`/test1 || sudo mount -o loop test1.img test1
+	mount|grep -q `pwd`/test2 || sudo mount -o loop test2.img test2
+	sudo chown -R `whoami` test1 test2
+
+test-mount:
+	rm -f logfile.log
+	mount|grep -q `pwd`/mnt && make test-umount || true
+	./$(TARGET) test1 test2 mnt -o \
+		logfile=logfile.log,mlimit=50m,nonempty,loglevel=0
+	df -h test1 test2
+	ls mnt
+
+test-umount:
+	-fusermount -u mnt
+
+test1.img:
+	dd if=/dev/zero of=$@ bs=1M count=100
+	echo y|/sbin/mkfs.ext3 $@
+
+test2.img:
+	dd if=/dev/zero of=$@ bs=1M count=200
+	echo y|/sbin/mkfs.ext3 $@
+
+test:
+	file_name=`mktemp -p mnt file_XXXXXXXXXX`; \
+		echo $$file_name; \
+		dd if=/dev/urandom of=$$file_name bs=1M count=1 2> /dev/null
+
+btest:
+	file_name=`mktemp -p mnt file_XXXXXXXXXX`; \
+		echo $$file_name; \
+		dd if=/dev/urandom bs=1M count=65 2> /dev/null \
+			|tee $$file_name \
+			|md5sum; \
+		md5sum $$file_name
+		
+
+tests:
+	while make test; do echo ok; echo; done
+
+test-images: test1.img test2.img
+
+.PHONY: all clean open_project tarball \
+	release_svn_thread test-mount test-umount \
+	images-mount test tests
 
 include $(wildcard obj/*.d)

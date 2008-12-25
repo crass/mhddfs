@@ -34,11 +34,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "debug.h"
 #include "tools.h"
 
-#define MLIMIT_OPTION   "mlimit="
-#define LOGFILE_OPTION  "logfile="
-#define LOG_LEVEL       "loglevel="
-
-
 struct mhdd_config mhdd={0};
 
 #define MHDDFS_OPT(t, p, v) { t, offsetof(struct mhdd_config, p), v }
@@ -234,7 +229,7 @@ struct fuse_args * parse_options(int argc, char *argv[])
                     break;
             }
         }
-        if (mhdd.move_limit<100*1024*1024) mhdd.move_limit=100*1024*1024;
+        if (mhdd.move_limit<50*1024*1024) mhdd.move_limit=50*1024*1024;
     }
     fprintf(stderr, "mhddfs: move size limit %lld bytes\n",
             (long long)mhdd.move_limit);

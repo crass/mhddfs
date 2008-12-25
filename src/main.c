@@ -255,12 +255,14 @@ static int mhdd_internal_open(const char *file,
         if (what==CREATE_FUNCTION) fd=open(path, fi->flags, mode);
         else fd=open(path, fi->flags);
         if (fd==-1) { free(path); return -errno; }
-        struct files_info *add=add_file_list(file, path, fi->flags, fd);
+        struct flist *add=flist_create(file, path, fi->flags, fd);
         fi->fh=add->id;
+        flist_unlock_file(add);
         free(path);
         return 0;
     }
 
+    mhdd_debug(MHDD_INFO, "mhdd_internal_open: exists file %s\n", file);
     dir_id=get_free_dir();
     create_parent_dirs(dir_id, file);
     path=create_path(mhdd.dirs[dir_id], file);
@@ -285,8 +287,9 @@ static int mhdd_internal_open(const char *file,
         }
         fchown(fd, fuse_get_context()->uid, gid);
     }
-    struct files_info *add=add_file_list(file, path, fi->flags, fd);
+    struct flist *add=flist_create(file, path, fi->flags, fd);
     fi->fh=add->id;
+    flist_unlock_file(add);
     free(path);
     return 0;
 }
@@ -315,23 +318,20 @@ static int mhdd_fileopen(const char *file, struct fuse_file_info *fi)
 // close
 static int mhdd_release(const char *path, struct fuse_file_info *fi)
 {
+    struct flist *del;
+    
     mhdd_debug(MHDD_MSG, "mhdd_release: %s, handle=%lld\n", path, fi->fh);
-
-    lock_files();
-    struct files_info *del=get_info_by_id(fi->fh);
+    del=flist_item_by_id(fi->fh);
     if (!del)
     {
-        mhdd_debug(MHDD_INFO, "mhdd_release: unknown file number: %llu\n", fi->fh);
+        mhdd_debug(MHDD_INFO, 
+            "mhdd_release: unknown file number: %llu\n", fi->fh);
         errno=EBADF;
-        unlock_files();
         return -errno;
     }
 
-    int fh=del->fh;
-    unlock_files();
-
-    close(fh);
-    del_file_list(del);
+    close(del->fh);
+    flist_delete_locked(del);
     return 0;
 }
 
@@ -340,22 +340,16 @@ static int mhdd_read(const char *path, char *buf, size_t count, off_t offset,
         struct fuse_file_info *fi)
 {
     ssize_t res;
-    lock_files();
-    struct files_info *info=get_info_by_id(fi->fh);
-    mhdd_debug(MHDD_INFO, "mhdd_read: %s, handle=%lld\n", path, fi->fh);
-
-    if (!info)
-    {
-        unlock_files();
-        errno=EBADF;
-        return -errno;
-    }
-
-    pthread_mutex_lock(&info->lock);
-    unlock_files();
-
+    struct flist * info;
+    mhdd_debug(MHDD_INFO, "mhdd_read: %s, offset=%lld, count=%lld\n",
+        path,
+        (long long)offset,
+        (long long)count
+    );
+    info=flist_item_by_id(fi->fh);
+    if (!info) { errno=EBADF; return -errno; }
     res=pread(info->fh, buf, count, offset);
-    pthread_mutex_unlock(&info->lock);
+    flist_unlock_file(info);
     if (res==-1) return -errno;
     return res;
 }
@@ -365,25 +359,22 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
         off_t offset, struct fuse_file_info *fi)
 {
     ssize_t res;
-    lock_files();
-    struct files_info *info=get_info_by_id(fi->fh);
+    struct flist *info;
     mhdd_debug(MHDD_INFO, "mhdd_write: %s, handle=%lld\n", path, fi->fh);
+    info=flist_item_by_id(fi->fh);
 
-    if (!info)
-    {
-        unlock_files();
-        errno=EBADF;
-        return -errno;
-    }
-
-    pthread_mutex_lock(&info->lock);
-    unlock_files();
-
+    if (!info) { errno=EBADF; return -errno; }
+    
     res=pwrite(info->fh, buf, count, offset);
-
     if ((res==count)||(res==-1 && errno!=ENOSPC))
     {
-        pthread_mutex_unlock(&info->lock);
+    	flist_unlock_file(info);
+    	if (res==-1)
+    	{
+    		mhdd_debug(MHDD_DEBUG, "mhdd_write: error write %s: %s\n",
+    		    info->real_name, strerror(errno));
+    	    return -errno;
+    	}
         return res;
     }
 
@@ -391,14 +382,14 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
     if (move_file(info, offset+count)==0) 
     {
         res=pwrite(info->fh, buf, count, offset);
-        pthread_mutex_unlock(&info->lock);
+    	flist_unlock_file(info);
         if (res==-1) 
         {
             mhdd_debug(MHDD_DEBUG, "mhdd_write: error restart write: %s\n",
                     strerror(errno));
             return -errno;
         }
-        else if (res<count)
+        if (res<count)
         {
             mhdd_debug(MHDD_DEBUG, 
                     "mhdd_write: error (re)write file %s %s\n",
@@ -408,7 +399,8 @@ static int mhdd_write(const char *path, const char *buf, size_t count,
         return res;
     }
     errno=ENOSPC;
-    pthread_mutex_unlock(&info->lock);
+
+    flist_unlock_file(info);
     return -errno;
 }
 
@@ -433,20 +425,15 @@ static int mhdd_ftruncate(const char *path, off_t size,
         struct fuse_file_info *fi)
 {
     int res;
-    lock_files();
-    struct files_info *info=get_info_by_id(fi->fh);
+    struct flist *info;
     mhdd_debug(MHDD_MSG, "mhdd_ftruncate: %s, handle=%lld\n", path, fi->fh);
-
-    if (!info)
-    {
-        unlock_files();
-        errno=EBADF;
-        return -errno;
-    }
+    info=flist_item_by_id(fi->fh);
+    
+    if (!info) { errno=EBADF; return -errno; }
 
     int fh=info->fh;
-    unlock_files();
     res=ftruncate(fh, size);
+    flist_unlock_file(info);
     if (res==-1) return -errno;
     return 0;
 }
@@ -757,19 +744,13 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
 static int mhdd_fsync(const char *path, int isdatasync, 
         struct fuse_file_info *fi)
 {
+    struct flist *info;
     mhdd_debug(MHDD_MSG, "mhdd_fsync: path=%s handle=%llu\n", path, fi->fh);
-    lock_files();
-    struct files_info *info=get_info_by_id(fi->fh);
+    info=flist_item_by_id(fi->fh);
     int res;
-    if (!info)
-    {
-        errno=EBADF;
-        unlock_files();
-        return -errno;
-    }
+    if (!info) { errno=EBADF; return -errno; }
 
     int fh=info->fh;
-    unlock_files();
 
 #ifdef HAVE_FDATASYNC
     if (isdatasync)
@@ -777,6 +758,8 @@ static int mhdd_fsync(const char *path, int isdatasync,
     else
 #endif
         res = fsync(fh);
+    
+    flist_unlock_file(info);
     if (res == -1) return -errno;
     return 0;
 }
@@ -814,6 +797,6 @@ int main(int argc, char *argv[])
 {
     mhdd_debug_init();
     struct fuse_args *args=parse_options(argc, argv);
-    mhdd_tools_init();
+    flist_init();
     return fuse_main(args->argc, args->argv, &mhdd_oper, 0);
 }
