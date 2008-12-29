@@ -1,3 +1,9 @@
+mhddfs (0.1.18-1) unstable; urgency=low
+
+  * New upstream release. Fixed deadlocks.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Mon, 29 Dec 2008 12:06:57 +0300
+
 mhddfs (0.1.17-1) unstable; urgency=low
 
   * New upstream release. Now the mount's directories can be
