@@ -740,6 +740,12 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
     return -errno;
 }
 
+#if _POSIX_SYNCHRONIZED_IO + 0 > 0
+#undef HAVE_FDATASYNC
+#else
+#define HAVE_FDATASYNC 1
+#endif
+
 //fsync
 static int mhdd_fsync(const char *path, int isdatasync, 
         struct fuse_file_info *fi)
