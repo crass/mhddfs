@@ -1,3 +1,10 @@
+mhddfs (0.1.19-1) unstable; urgency=low
+
+  * Check free space is better than before: code will return the error if
+    it does not find free space.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Wed, 11 Mar 2009 12:55:19 +0300
+
 mhddfs (0.1.18-1) unstable; urgency=low
 
   * New upstream release. Fixed deadlocks.

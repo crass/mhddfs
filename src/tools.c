@@ -54,6 +54,7 @@ int get_free_dir(void)
         }
     }
 
+    if (!max_space) return -1;
     return max;
 }
 

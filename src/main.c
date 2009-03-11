@@ -263,7 +263,11 @@ static int mhdd_internal_open(const char *file,
     }
 
     mhdd_debug(MHDD_INFO, "mhdd_internal_open: exists file %s\n", file);
-    dir_id=get_free_dir();
+    if ((dir_id=get_free_dir())<0)
+    {
+    	errno=ENOSPC;
+    	return -errno;
+    }
     create_parent_dirs(dir_id, file);
     path=create_path(mhdd.dirs[dir_id], file);
 
@@ -474,6 +478,8 @@ static int mhdd_mkdir(const char * path, mode_t mode)
     free(parent);
 
     int dir_id=get_free_dir();
+    if (dir_id<0) { errno=ENOSPC; return -errno; }
+
     create_parent_dirs(dir_id, path);
     char *name=create_path(mhdd.dirs[dir_id], path);
     if (mkdir(name, mode)==0)
@@ -672,7 +678,12 @@ static int mhdd_symlink(const char *from, const char *to)
     {
         if (i)
         {
-            dir_id=get_free_dir();
+            if ((dir_id=get_free_dir())<0)
+            {
+            	errno=ENOSPC;
+            	return -errno;
+            }
+
             create_parent_dirs(dir_id, to);
         }
 
@@ -713,7 +724,11 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
     {
         if (i)
         {
-            dir_id=get_free_dir();
+            if ((dir_id=get_free_dir())<0)
+            {
+            	errno=ENOSPC;
+            	return -errno;
+            }
             create_parent_dirs(dir_id, path);
         }
         nod=create_path(mhdd.dirs[dir_id], path);
