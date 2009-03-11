@@ -262,7 +262,7 @@ static int mhdd_internal_open(const char *file,
         return 0;
     }
 
-    mhdd_debug(MHDD_INFO, "mhdd_internal_open: exists file %s\n", file);
+    mhdd_debug(MHDD_INFO, "mhdd_internal_open: new file %s\n", file);
     if ((dir_id=get_free_dir())<0)
     {
     	errno=ENOSPC;

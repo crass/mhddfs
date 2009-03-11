@@ -54,7 +54,13 @@ int get_free_dir(void)
         }
     }
 
-    if (!max_space) return -1;
+    if (!max_space) 
+    {
+        mhdd_debug(MHDD_INFO,
+            "get_free_dir: Can not find freespace in all directories\n"
+        );
+        return -1;
+    }
     return max;
 }
 
