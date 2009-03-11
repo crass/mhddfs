@@ -56,7 +56,7 @@ obj/%.o: src/%.c
 	gcc $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -fr obj $(TARGET) pwrite_test
+	rm -fr obj $(TARGET) pwrite_test statvfs
 
 release_svn_thread:
 	@echo current version $(VERSION)
@@ -71,6 +71,9 @@ open_project:
 	screen -t vim vim Makefile src/*.[ch] README* ChangeLog mhddfs.1
 
 pwrite_test: src/test/pwrite.c
+	gcc -o $@ $<
+
+statvfs: src/test/statvfs.c
 	gcc -o $@ $<
 
 images-mount: test1.img test2.img

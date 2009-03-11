@@ -35,7 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // get diridx for maximum free space
 int get_free_dir(void)
 {
-    int i, max, cfg=-1;
+    int i, max;
     struct statvfs stf;
     fsblkcnt_t max_space=0;
 
@@ -45,15 +45,16 @@ int get_free_dir(void)
         fsblkcnt_t space  = stf.f_bsize;
         space *= stf.f_bavail;
 
+        if (space>=mhdd.move_limit) return i;
+
         if(space>max_space)
         {
             max_space=space;
             max=i;
         }
-        if (cfg==-1 && space>=mhdd.move_limit) cfg=i;
     }
 
-    return (cfg==-1)?max:cfg;
+    return max;
 }
 
 // find mount point with free space > size
