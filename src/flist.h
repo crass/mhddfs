@@ -4,7 +4,6 @@
 // opened file list
 struct flist
 {
-	pthread_mutex_t lock;
 	char        *name;
 	char        *real_name;
 	int         flags;
@@ -17,20 +16,27 @@ struct flist
 	struct flist *next, *prev;
 };
 
+
+// init list system
 void flist_init(void);
 
+// create item and rdlock
 struct flist* flist_create(const char *name,
 	const char *real_name, int flags, int fh);
 
 
-
+// return item by id and rdlock
 struct flist * flist_item_by_id(uint64_t id);
+
+// return all items by item and wrlock
 struct flist ** flist_items_by_eq_name(struct flist * info);
 
-
-void flist_delete(struct flist * item);
+// delete item from locked list
 void flist_delete_locked(struct flist * item);
 
-
-void flist_unlock_file(struct flist * item);
-
+// lock for read
+void flist_rdlock(void);
+// lock for write
+void flist_wrlock(void);
+// unlock
+void flist_unlock(void);
