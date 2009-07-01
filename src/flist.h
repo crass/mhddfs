@@ -4,23 +4,23 @@
 // opened file list
 struct flist
 {
-    pthread_mutex_t lock;
-    char        *name;
-    char        *real_name;
-    int         flags;
-    int         fh;
-    union
-    {
-        uint64_t    id;
-        struct flist *aid;
-    };
-    struct flist *next, *prev;
+	pthread_mutex_t lock;
+	char        *name;
+	char        *real_name;
+	int         flags;
+	int         fh;
+	union
+	{
+		uint64_t    id;
+		struct flist *aid;
+	};
+	struct flist *next, *prev;
 };
 
 void flist_init(void);
 
-struct flist* flist_create(const char *name, 
-    const char *real_name, int flags, int fh);
+struct flist* flist_create(const char *name,
+	const char *real_name, int flags, int fh);
 
 
 
