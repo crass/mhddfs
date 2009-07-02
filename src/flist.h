@@ -28,7 +28,7 @@ struct flist* flist_create(const char *name,
 // return item by id and rdlock
 struct flist * flist_item_by_id(uint64_t id);
 
-// return all items by item and wrlock
+// return all items by item
 struct flist ** flist_items_by_eq_name(struct flist * info);
 
 // delete item from locked list
@@ -40,3 +40,6 @@ void flist_rdlock(void);
 void flist_wrlock(void);
 // unlock
 void flist_unlock(void);
+
+// wrlock
+void flist_wrlock_locked(void);

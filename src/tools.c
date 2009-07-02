@@ -92,53 +92,58 @@ static int reopen_files(struct flist * file, const char *new_name)
 {
 	int i;
 	struct flist ** rlist;
+	int error = 0;
 
 	mhdd_debug(MHDD_INFO, "reopen_files: %s -> %s\n",
 			file->real_name, new_name);
 	rlist = flist_items_by_eq_name(file);
-	if (!rlist) return 0;
+	if (!rlist)
+		return 0;
 
-	int error=0;
+	for (i = 0; rlist[i]; i++) {
+		struct flist * next = rlist[i];
 
-	for (i=0; rlist[i]; i++)
-	{
-		struct flist * next=rlist[i];
-
-		off_t seek=lseek(next->fh, 0, SEEK_CUR);
-		int flags=next->flags;
+		off_t seek = lseek(next->fh, 0, SEEK_CUR);
+		int flags = next->flags;
 		int fh;
 
 		flags &= ~(O_EXCL|O_TRUNC);
 
 		// open
-		if ((fh=open(new_name, flags))==-1)
-		{
+		if ((fh = open(new_name, flags)) == -1) {
 			mhdd_debug(MHDD_INFO,
 				"reopen_files: error reopen: %s\n",
 				strerror(errno));
-			if (!i) { error=errno; break; }
+			if (!i) {
+				error = errno;
+				break;
+			}
 			close(next->fh);
 		}
 		else
 		{
 			// seek
-			if (seek!=lseek(fh, seek, SEEK_SET))
-			{
+			if (seek != lseek(fh, seek, SEEK_SET)) {
 				mhdd_debug(MHDD_INFO,
 					"reopen_files: error seek %s\n",
 					strerror(errno));
 				close(fh);
-				if (!i) { error=errno; break; }
+				if (!i) {
+					error = errno;
+					break;
+				}
 			}
 
 			// filehandle
-			if (dup2(fh, next->fh)!=next->fh)
-			{
+			if (dup2(fh, next->fh) != next->fh) {
 				mhdd_debug(MHDD_INFO,
 					"reopen_files: error dup2 %s\n",
 					strerror(errno));
 				close(fh);
-				if (!i) { error=errno; break; }
+				if (!i) {
+					error = errno;
+					break;
+				}
 			}
 			// close temporary filehandle
 			mhdd_debug(MHDD_MSG,
@@ -149,15 +154,9 @@ static int reopen_files(struct flist * file, const char *new_name)
 		}
 	}
 
-	/* unlock all files exclude current */
-	for (i=0; rlist[i]; i++)
-	{
-		if (rlist[i]==file) continue;
-		flist_unlock_file(rlist[i]);
-	}
-
 	free(rlist);
-	if (error) return -error;
+	if (error)
+		return -error;
 	return 0;
 }
 
@@ -167,13 +166,28 @@ int move_file(struct flist * file, off_t wsize)
 	off_t size;
 	FILE *input, *output;
 	int ret, dir_id;
+	struct utimbuf ftime = {0};
+	struct statvfs svf;
+	fsblkcnt_t space;
+	struct stat st;
 
 	mhdd_debug(MHDD_MSG, "move_file: %s\n", file->real_name);
 
+	flist_wrlock_locked();
 	from=file->real_name;
-	struct stat st;
-	if (stat(from, &st)!=0)
-	{
+
+	/* We need to check if already moved */
+	if (statvfs(from, &svf) != 0)
+		return -errno;
+	space = svf.f_bsize;
+	space *= svf.f_bavail;
+	if (space > wsize) {
+		mhdd_debug(MHDD_MSG, "move_file: we have enouth space\n");
+		return 0;
+	}
+
+	/* get file size */
+	if (fstat(file->fh, &st)!=0) {
 		mhdd_debug(MHDD_MSG, "move_file: error stat %s: %s\n",
 			from, strerror(errno));
 		return -errno;
@@ -232,16 +246,14 @@ int move_file(struct flist * file, off_t wsize)
 	fclose(output);
 
 	// time
-	struct utimbuf ftime={0};
-	ftime.actime=st.st_atime;
-	ftime.modtime=st.st_mtime;
+	ftime.actime = st.st_atime;
+	ftime.modtime = st.st_mtime;
 	utime(to, &ftime);
 
-	/* temporary workaround against deadlock */
-	/* TODO: fix it */
-/*         if ((ret=reopen_files(file, to))==0) unlink(from); */
-/*         else unlink(to); */
-	unlink(from);
+	if ((ret = reopen_files(file, to)) == 0)
+		unlink(from);
+	else
+		unlink(to);
 
 	mhdd_debug(MHDD_MSG, "move_file: %s -> %s: done, code=%d\n",
 		from, to, ret);

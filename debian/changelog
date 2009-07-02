@@ -1,6 +1,7 @@
 mhddfs (0.1.20-1) unstable; urgency=low
 
   * New upstream version.
+   * Fixed possible deadlock when it moves file between sources.
 
  -- Dmitry E. Oboukhov <unera@debian.org>  Wed, 01 Jul 2009 09:28:29 +0400
 
