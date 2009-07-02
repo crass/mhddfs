@@ -181,10 +181,6 @@ int move_file(struct flist * file, off_t wsize)
 		return -errno;
 	space = svf.f_bsize;
 	space *= svf.f_bavail;
-	if (space > wsize) {
-		mhdd_debug(MHDD_MSG, "move_file: we have enouth space\n");
-		return 0;
-	}
 
 	/* get file size */
 	if (fstat(file->fh, &st)!=0) {
@@ -192,23 +188,27 @@ int move_file(struct flist * file, off_t wsize)
 			from, strerror(errno));
 		return -errno;
 	}
-	size=st.st_size;
-	if (size<wsize) size=wsize;
+	size = st.st_size;
+	if (size < wsize) size=wsize;
 
-	if ((dir_id=find_free_space(size))==-1)
-	{
+	if (space > size) {
+		mhdd_debug(MHDD_MSG, "move_file: we have enouth space\n");
+		return 0;
+	}
+
+	if ((dir_id=find_free_space(size)) == -1) {
 		mhdd_debug(MHDD_MSG, "move_file: can not find space\n");
 		return -1;
 	}
 
-	if (!(input=fopen(from, "r"))) return -errno;
+	if (!(input = fopen(from, "r")))
+		return -errno;
 
 	create_parent_dirs(dir_id, file->name);
 
 	to=create_path(mhdd.dirs[dir_id], file->name);
-	if (!(output=fopen(to, "w+")))
-	{
-		ret=-errno;
+	if (!(output = fopen(to, "w+"))) {
+		ret = -errno;
 		mhdd_debug(MHDD_MSG, "move_file: error create %s: %s\n",
 				to, strerror(errno));
 		free(to);
@@ -220,10 +220,8 @@ int move_file(struct flist * file, off_t wsize)
 
 	// move data
 	buf=(char *)calloc(sizeof(char), MOVE_BLOCK_SIZE);
-	while((size=fread(buf, sizeof(char), MOVE_BLOCK_SIZE, input)))
-	{
-		if (size!=fwrite(buf, sizeof(char), size, output))
-		{
+	while((size=fread(buf, sizeof(char), MOVE_BLOCK_SIZE, input))) {
+		if (size!=fwrite(buf, sizeof(char), size, output)) {
 			mhdd_debug(MHDD_MSG,
 				"move_file: error move data to %s: %s\n",
 				to, strerror(errno));

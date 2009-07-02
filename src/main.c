@@ -325,6 +325,7 @@ static int mhdd_fileopen(const char *file, struct fuse_file_info *fi)
 static int mhdd_release(const char *path, struct fuse_file_info *fi)
 {
 	struct flist *del;
+	int fh;
 
 	mhdd_debug(MHDD_MSG, "mhdd_release: %s, handle = %lld\n", path, fi->fh);
 	del = flist_item_by_id(fi->fh);
@@ -335,8 +336,9 @@ static int mhdd_release(const char *path, struct fuse_file_info *fi)
 		return -errno;
 	}
 
-	close(del->fh);
+	fh = del->fh;
 	flist_delete_locked(del);
+	close(fh);
 	return 0;
 }
 

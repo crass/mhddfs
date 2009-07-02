@@ -29,32 +29,48 @@ void flist_init(void)
 // unlock semaphore
 void flist_unlock(void)
 {
-	pthread_rwlock_unlock(&files_lock);
+	if (pthread_rwlock_unlock(&files_lock) != 0) {
+		mhdd_debug(MHDD_DEBUG, "E error unlock flist\n");
+	}
+	mhdd_debug(MHDD_DEBUG, "< unlock flist\n");
 }
 
 // lock for read
 void flist_rdlock(void)
 {
-	pthread_rwlock_rdlock(&files_lock);
+	mhdd_debug(MHDD_DEBUG, "> rdlock flist try to get\n");
+	pthread_mutex_lock(&files_mutex);
+	while (pthread_rwlock_rdlock(&files_lock) == EAGAIN) {
+		mhdd_debug(MHDD_DEBUG, "maximum number of rdlocks exceeded\n");
+		usleep(100);
+	}
+	pthread_mutex_unlock(&files_mutex);
+	mhdd_debug(MHDD_DEBUG, "+ rdlock flist received\n");
 }
 
 // lock for write
 void flist_wrlock(void)
 {
+	mhdd_debug(MHDD_DEBUG, "> wrlock flist try to get\n");
 	/* get mutex before wrlock */
 	pthread_mutex_lock(&files_mutex);
+	mhdd_debug(MHDD_DEBUG, "M wrlock flist mutex got\n");
 	pthread_rwlock_wrlock(&files_lock);
 	pthread_mutex_unlock(&files_mutex);
+	mhdd_debug(MHDD_DEBUG, "+ wrlock flist received\n");
 }
 
 // lock for write for locked
 void flist_wrlock_locked(void)
 {
 	/* Only one thread can change lock method */
+	mhdd_debug(MHDD_DEBUG, "> wrlock locked flist try to get\n");
 	pthread_mutex_lock(&files_mutex);
+	mhdd_debug(MHDD_DEBUG, "M wrlock locked flist mutex got\n");
 	pthread_rwlock_unlock(&files_lock);
 	pthread_rwlock_wrlock(&files_lock);
 	pthread_mutex_unlock(&files_mutex);
+	mhdd_debug(MHDD_DEBUG, "+ wrlock locked flist received\n");
 }
 
 // add file to list
