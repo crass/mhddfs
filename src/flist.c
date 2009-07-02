@@ -18,6 +18,7 @@ static struct flist *files = 0;
 	for(__next = files; __next; __next = __next->next)
 
 
+static pthread_mutex_t files_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_rwlock_t files_lock;
 // init
 void flist_init(void)
@@ -40,18 +41,19 @@ void flist_rdlock(void)
 // lock for write
 void flist_wrlock(void)
 {
+	/* get mutex before wrlock */
+	pthread_mutex_lock(&files_mutex);
 	pthread_rwlock_wrlock(&files_lock);
+	pthread_mutex_unlock(&files_mutex);
 }
 
 // lock for write for locked
 void flist_wrlock_locked(void)
 {
-	static pthread_mutex_t files_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 	/* Only one thread can change lock method */
 	pthread_mutex_lock(&files_mutex);
-	flist_unlock();
-	flist_wrlock();
+	pthread_rwlock_unlock(&files_lock);
+	pthread_rwlock_wrlock(&files_lock);
 	pthread_mutex_unlock(&files_mutex);
 }
 
