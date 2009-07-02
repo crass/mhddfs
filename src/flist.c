@@ -19,8 +19,6 @@ static struct flist *files = 0;
 
 
 static pthread_rwlock_t files_lock;
-static pthread_mutex_t files_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 // init
 void flist_init(void)
 {
@@ -48,6 +46,8 @@ void flist_wrlock(void)
 // lock for write for locked
 void flist_wrlock_locked(void)
 {
+	static pthread_mutex_t files_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 	/* Only one thread can change lock method */
 	pthread_mutex_lock(&files_mutex);
 	flist_unlock();
@@ -73,8 +73,6 @@ struct flist * flist_create(const char *name,
 	if (files)
 		files->prev = add;
 	files = add;
-	flist_unlock();
-	flist_rdlock();
 	return add;
 }
 
@@ -116,6 +114,7 @@ struct flist * flist_item_by_id(uint64_t id) {
 		if (next->id == id)
 			return next;
 	}
+	flist_unlock();
 	return 0;
 }
 
@@ -126,10 +125,7 @@ static void delete_item(struct flist *item, int locked)
 	struct flist *next;
 
 	if (locked) {
-		pthread_mutex_lock(&files_mutex);
-		flist_unlock();
-		flist_wrlock();
-		pthread_mutex_unlock(&files_mutex);
+		flist_wrlock_locked();
 	} else {
 		flist_wrlock();
 	}

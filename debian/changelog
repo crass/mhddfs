@@ -1,3 +1,9 @@
+mhddfs (0.1.21-1) unstable; urgency=low
+
+  * Fixed deadlock when it closes bad file descrioption.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Thu, 02 Jul 2009 12:09:17 +0400
+
 mhddfs (0.1.20-1) unstable; urgency=low
 
   * New upstream version.

@@ -62,3 +62,6 @@ thanks to Konstantin Zavialov <konstantin.z@gmail.com>
  and old variant works too:
  	mhddfs /dir1,/dir2 /mount
 * Reformatted sources.
+
+0.1.21
+* Fixed possible deadlocks
