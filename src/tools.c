@@ -173,6 +173,7 @@ int move_file(struct flist * file, off_t wsize)
 
 	mhdd_debug(MHDD_MSG, "move_file: %s\n", file->real_name);
 
+	/* TODO: it would be nice to contrive something alter */
 	flist_wrlock_locked();
 	from=file->real_name;
 
@@ -183,7 +184,7 @@ int move_file(struct flist * file, off_t wsize)
 	space *= svf.f_bavail;
 
 	/* get file size */
-	if (fstat(file->fh, &st)!=0) {
+	if (fstat(file->fh, &st) != 0) {
 		mhdd_debug(MHDD_MSG, "move_file: error stat %s: %s\n",
 			from, strerror(errno));
 		return -errno;
@@ -206,7 +207,7 @@ int move_file(struct flist * file, off_t wsize)
 
 	create_parent_dirs(dir_id, file->name);
 
-	to=create_path(mhdd.dirs[dir_id], file->name);
+	to = create_path(mhdd.dirs[dir_id], file->name);
 	if (!(output = fopen(to, "w+"))) {
 		ret = -errno;
 		mhdd_debug(MHDD_MSG, "move_file: error create %s: %s\n",
@@ -220,8 +221,8 @@ int move_file(struct flist * file, off_t wsize)
 
 	// move data
 	buf=(char *)calloc(sizeof(char), MOVE_BLOCK_SIZE);
-	while((size=fread(buf, sizeof(char), MOVE_BLOCK_SIZE, input))) {
-		if (size!=fwrite(buf, sizeof(char), size, output)) {
+	while((size = fread(buf, sizeof(char), MOVE_BLOCK_SIZE, input))) {
+		if (size != fwrite(buf, sizeof(char), size, output)) {
 			mhdd_debug(MHDD_MSG,
 				"move_file: error move data to %s: %s\n",
 				to, strerror(errno));

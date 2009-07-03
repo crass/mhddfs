@@ -117,6 +117,11 @@ btest:
 tests:
 	while make test; do echo ok; echo; done
 
+ptest:
+	gcc -o $@ tests/plocks.c -l pthread
+	-./$@
+	rm -f $@
+
 test-images: test1.img test2.img
 
 .PHONY: all clean open_project tarball \

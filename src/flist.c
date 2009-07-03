@@ -18,6 +18,9 @@ static struct flist *files = 0;
 	for(__next = files; __next; __next = __next->next)
 
 
+enum { UNLOCKED, RDLOCKED, WRLOCKED };
+
+
 static pthread_mutex_t files_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_rwlock_t files_lock;
 // init
@@ -38,39 +41,20 @@ void flist_unlock(void)
 // lock for read
 void flist_rdlock(void)
 {
-	mhdd_debug(MHDD_DEBUG, "> rdlock flist try to get\n");
-	pthread_mutex_lock(&files_mutex);
-	while (pthread_rwlock_rdlock(&files_lock) == EAGAIN) {
-		mhdd_debug(MHDD_DEBUG, "maximum number of rdlocks exceeded\n");
-		usleep(100);
-	}
-	pthread_mutex_unlock(&files_mutex);
-	mhdd_debug(MHDD_DEBUG, "+ rdlock flist received\n");
+	pthread_rwlock_rdlock(&files_lock);
 }
 
 // lock for write
 void flist_wrlock(void)
 {
-	mhdd_debug(MHDD_DEBUG, "> wrlock flist try to get\n");
-	/* get mutex before wrlock */
-	pthread_mutex_lock(&files_mutex);
-	mhdd_debug(MHDD_DEBUG, "M wrlock flist mutex got\n");
 	pthread_rwlock_wrlock(&files_lock);
-	pthread_mutex_unlock(&files_mutex);
-	mhdd_debug(MHDD_DEBUG, "+ wrlock flist received\n");
 }
 
 // lock for write for locked
 void flist_wrlock_locked(void)
 {
-	/* Only one thread can change lock method */
-	mhdd_debug(MHDD_DEBUG, "> wrlock locked flist try to get\n");
-	pthread_mutex_lock(&files_mutex);
-	mhdd_debug(MHDD_DEBUG, "M wrlock locked flist mutex got\n");
 	pthread_rwlock_unlock(&files_lock);
 	pthread_rwlock_wrlock(&files_lock);
-	pthread_mutex_unlock(&files_mutex);
-	mhdd_debug(MHDD_DEBUG, "+ wrlock locked flist received\n");
 }
 
 // add file to list
@@ -124,10 +108,14 @@ struct flist ** flist_items_by_eq_name(struct flist * info)
 	return result;
 }
 
-/* return (locked) item from flist */
-struct flist * flist_item_by_id(uint64_t id) {
+/* return (wr- or rdlocked) item by id */
+static struct flist * item_by_id(uint64_t id, int wrlock)
+{
 	struct flist * next;
-	flist_rdlock();
+	if (wrlock)
+		flist_wrlock();
+	else
+		flist_rdlock();
 	flist_foreach(next) {
 		if (next->id == id)
 			return next;
@@ -136,16 +124,28 @@ struct flist * flist_item_by_id(uint64_t id) {
 	return 0;
 }
 
+/* return (rdlocked) item from flist */
+struct flist * flist_item_by_id(uint64_t id) {
+	return item_by_id(id, 0);
+}
+/* return (wrlocked) item from flist */
+struct flist * flist_item_by_id_wrlock(uint64_t id) {
+	return item_by_id(id, 1);
+}
+
 
 /* internal function */
 static void delete_item(struct flist *item, int locked)
 {
 	struct flist *next;
 
-	if (locked) {
-		flist_wrlock_locked();
-	} else {
-		flist_wrlock();
+	switch(locked) {
+		case UNLOCKED:
+			flist_wrlock();
+		case RDLOCKED:
+			flist_wrlock_locked();
+		case WRLOCKED:
+			break;
 	}
 
 	flist_foreach(next) {
@@ -172,11 +172,17 @@ static void delete_item(struct flist *item, int locked)
 // delete from file list
 void flist_delete(struct flist *item)
 {
-	delete_item(item, 0);
+	delete_item(item, UNLOCKED);
 }
 
 // delete locked file from list
 void flist_delete_locked(struct flist *item)
 {
-	delete_item(item, 1);
+	delete_item(item, RDLOCKED);
+}
+
+// delete item from wrlocked list
+void flist_delete_wrlocked(struct flist * item)
+{
+	delete_item(item, WRLOCKED);
 }

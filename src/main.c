@@ -328,7 +328,7 @@ static int mhdd_release(const char *path, struct fuse_file_info *fi)
 	int fh;
 
 	mhdd_debug(MHDD_MSG, "mhdd_release: %s, handle = %lld\n", path, fi->fh);
-	del = flist_item_by_id(fi->fh);
+	del = flist_item_by_id_wrlock(fi->fh);
 	if (!del) {
 		mhdd_debug(MHDD_INFO,
 			"mhdd_release: unknown file number: %llu\n", fi->fh);
@@ -337,7 +337,7 @@ static int mhdd_release(const char *path, struct fuse_file_info *fi)
 	}
 
 	fh = del->fh;
-	flist_delete_locked(del);
+	flist_delete_wrlocked(del);
 	close(fh);
 	return 0;
 }
