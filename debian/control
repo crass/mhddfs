@@ -3,7 +3,7 @@ Section: utils
 Priority: extra
 Maintainer: Dmitry E. Oboukhov <unera@debian.org>
 Build-Depends: debhelper (>= 5), libfuse-dev, pkg-config
-Standards-Version: 3.8.0
+Standards-Version: 3.8.2
 Homepage: http://mhddfs.uvw.ru
 Vcs-Browser: http://svn.uvw.ru/mhddfs/trunk
 
