@@ -76,7 +76,7 @@ struct flist * flist_create(const char *name,
 	return add;
 }
 
-/* return (malloced & locked) array for list files with name == name */
+/* return (malloced) array for list files with name == name */
 struct flist ** flist_items_by_eq_name(struct flist * info)
 {
 	struct flist * next;
