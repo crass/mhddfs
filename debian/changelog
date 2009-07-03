@@ -1,6 +1,6 @@
 mhddfs (0.1.22-1) unstable; urgency=low
 
-  * Possible deadlock.
+  * Finally fixed deadlock when it moves file between sources.
 
  -- Dmitry E. Oboukhov <unera@debian.org>  Thu, 02 Jul 2009 18:04:18 +0400
 
