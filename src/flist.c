@@ -20,8 +20,6 @@ static struct flist *files = 0;
 
 enum { UNLOCKED, RDLOCKED, WRLOCKED };
 
-
-static pthread_mutex_t files_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_rwlock_t files_lock;
 // init
 void flist_init(void)
