@@ -1,3 +1,10 @@
+mhddfs (0.1.23-1) unstable; urgency=low
+
+  * Fixed rename mechanizm if files are in different hdds, closes: #547172,
+    tanks to Pozsar Balazs <pozsy@uhulinux.hu> for bugreport.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 29 Sep 2009 12:51:02 +0400
+
 mhddfs (0.1.22-1) unstable; urgency=low
 
   * Finally fixed deadlock when it moves file between sources.

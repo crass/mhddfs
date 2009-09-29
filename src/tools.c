@@ -26,6 +26,8 @@
 #include <errno.h>
 #include <utime.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include "tools.h"
 #include "debug.h"
@@ -403,4 +405,22 @@ char * get_base_name(const char *path)
 		strcpy(dir, file);
 	}
 	return dir;
+}
+
+/* return true if directory is empty */
+int dir_is_empty(const char *path)
+{
+	DIR * dir = opendir(path);
+	struct dirent *de;
+	if (!dir)
+		return -1;
+	while((de = readdir(dir))) {
+		if (strcmp(de->d_name, ".") == 0) continue;
+		if (strcmp(de->d_name, "..") == 0) continue;
+		closedir(dir);
+		return 0;
+	}
+
+	closedir(dir);
+	return 1;
 }

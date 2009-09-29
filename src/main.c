@@ -551,45 +551,101 @@ static int mhdd_unlink(const char *path)
 static int mhdd_rename(const char *from, const char *to)
 {
 	mhdd_debug(MHDD_MSG, "mhdd_rename: from = %s to = %s\n", from, to);
-	int from_dir_id = find_path_id(from);
 
-	if (from_dir_id == -1) {
-		errno = ENOENT;
-		return -errno;
+	if (strcmp(from, to) == 0)
+		return 0;
+
+	int i;
+	struct stat sto, sfrom;
+	char *obj_from = find_path(from), *obj_to = 0;
+	int to_exists = 0;
+	int to_is_exist_file = 0;
+	if (!obj_from)
+		return -ENOENT;
+	stat(obj_from, &sfrom);
+	/* seek exists to-object */
+	for (i = 0; i < mhdd.cdirs; i++) {
+		obj_to = create_path(mhdd.dirs[i], to);
+		if (stat(obj_to, &sto) != 0) {
+			free(obj_to);
+			obj_to = 0;
+			continue;
+		}
+
+		/* old path is dir, but new path isn't dir */
+		if (S_ISDIR(sfrom.st_mode)) {
+			if (!S_ISDIR(sto.st_mode)) {
+				free(obj_from);
+				free(obj_to);
+				return -ENOTDIR;
+			}
+
+			if (!dir_is_empty(obj_to)) {
+				free(obj_from);
+				free(obj_to);
+				return -ENOTEMPTY;
+			}
+		/* old path is file */
+		} else {
+			if (S_ISDIR(sto.st_mode)) {
+				free(obj_from);
+				free(obj_to);
+				return -EISDIR;
+			}
+			to_is_exist_file++;
+		}
+		free(obj_to);
+		to_exists = 1;
 	}
 
-	char * to_parent = get_parent_path(to);
-	if (to_parent) {
-		char * to_find_parent = find_path(to_parent);
-		free(to_parent);
-
-		if (!to_find_parent) {
-			errno = ENOENT;
-			return -errno;
+	/* new path is correct or doesnt exists */
+	if (!to_exists) {
+		/* is parent to path exist */
+		char *to_parent = get_parent_path(to);
+		if (find_path_id(to_parent) == -1) {
+			free(obj_from);
+			free(to_parent);
+			return -ENOENT;
 		}
-		free(to_find_parent);
-		// to-parent exists
-		// from exists
+		free(to_parent);
+		int from_dir_id = find_path_id(from);
 		create_parent_dirs(from_dir_id, to);
-		char *obj_to    = create_path(mhdd.dirs[from_dir_id], to);
-		char *obj_from  = create_path(mhdd.dirs[from_dir_id], from);
-
+		obj_to = create_path(mhdd.dirs[from_dir_id], to);
 		int res = rename(obj_from, obj_to);
-		free(obj_to);
 		free(obj_from);
-
+		free(obj_to);
 		if (res == -1)
 			return -errno;
-
-		if (find_path_id(from) == -1)
-			return 0;
-		// rename directories
-		return mhdd_rename(from, to);
+		return 0;
 	} else {
-		errno = ENOENT;
-		return -errno;
+		int from_dir_id = find_path_id(from);
+		obj_to = create_path(mhdd.dirs[from_dir_id], to);
+		create_parent_dirs(from_dir_id, to);
+		if (to_is_exist_file) {
+			/* unlink exist files */
+			for (i = 0; to_is_exist_file && i < mhdd.cdirs;
+					i++, to_is_exist_file--) {
+
+				char *u_to = find_path(to);
+				if (!u_to)
+					break;
+				if (unlink(u_to) == -1) {
+					free(u_to);
+					free(obj_from);
+					free(obj_to);
+					return -errno;
+				}
+			}
+		}
+
+		/* rename */
+		int res = rename(obj_from, obj_to);
+		free(obj_from);
+		free(obj_to);
+		if (res == -1)
+			return -errno;
+		return 0;
 	}
-	return 0;
 }
 
 // .utimens
