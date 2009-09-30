@@ -572,14 +572,15 @@ static int mhdd_rename(const char *from, const char *to)
 			continue;
 		}
 
-		/* old path is dir, but new path isn't dir */
 		if (S_ISDIR(sfrom.st_mode)) {
+			/* old path is dir, but new path isn't dir */
 			if (!S_ISDIR(sto.st_mode)) {
 				free(obj_from);
 				free(obj_to);
 				return -ENOTDIR;
 			}
 
+			/* target directory must be empty */
 			if (!dir_is_empty(obj_to)) {
 				free(obj_from);
 				free(obj_to);
@@ -598,7 +599,8 @@ static int mhdd_rename(const char *from, const char *to)
 		to_exists = 1;
 	}
 
-	/* new path is correct or doesnt exists */
+	/* Here: new path is correct or doesnt exists */
+
 	if (!to_exists) {
 		/* is parent to path exist */
 		char *to_parent = get_parent_path(to);
@@ -618,6 +620,7 @@ static int mhdd_rename(const char *from, const char *to)
 			return -errno;
 		return 0;
 	} else {
+		/* TODO: these operations must be atomic */
 		int from_dir_id = find_path_id(from);
 		obj_to = create_path(mhdd.dirs[from_dir_id], to);
 		create_parent_dirs(from_dir_id, to);
