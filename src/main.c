@@ -620,25 +620,32 @@ static int mhdd_rename(const char *from, const char *to)
 			return -errno;
 		return 0;
 	} else {
-		/* TODO: these operations must be atomic */
 		int from_dir_id = find_path_id(from);
 		obj_to = create_path(mhdd.dirs[from_dir_id], to);
 		create_parent_dirs(from_dir_id, to);
 		if (to_is_exist_file) {
-			/* unlink exist files */
-			for (i = 0; to_is_exist_file && i < mhdd.cdirs;
-					i++, to_is_exist_file--) {
 
-				char *u_to = find_path(to);
-				if (!u_to)
-					break;
-				if (unlink(u_to) == -1) {
-					free(u_to);
-					free(obj_from);
-					free(obj_to);
-					return -errno;
+			/* rename */
+			int res = rename(obj_from, obj_to);
+			free(obj_from);
+			free(obj_to);
+			if (res == -1)
+				return -errno;
+
+			/* unlink exist files */
+			for (res = i = 0; i < mhdd.cdirs; i++) {
+				if (i == from_dir_id)
+					continue;
+
+				obj_to = create_path(mhdd.dirs[i], to);
+				if (stat(obj_to, &sto) == 0) {
+					if (unlink(obj_to) == -1) {
+						res = res ? res : -errno;
+					}
 				}
+				free(obj_to);
 			}
+			return res;
 		}
 
 		/* rename */
