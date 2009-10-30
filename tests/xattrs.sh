@@ -1,17 +1,19 @@
 #!/bin/bash
 
+PATH=/sbin:$PATH
 
 set -x
 TMP_PATH="${1:-/tmp}"
 
 image1="test1.xfs.img"
 image2="test2.xfs.img"
-mount=mnt.xfs
+mount="mnt.xfs"
 mount1="test1.xfs"
 mount2="test2.xfs"
 logfile="logfile.xfs.log"
 
 CWD=`pwd`
+MHDDFS="$CWD/mhddfs"
 
 if ! which attr 1>/dev/null 2>&1; then
   echo "Need attr command to test extended attributes"
@@ -43,7 +45,7 @@ function setup() {
     
     # make xfs filesystems
     sudo mkfs.xfs -f $image1 1>/dev/null
-    sudo mkfs.xfs -f $image1 1>/dev/null
+    sudo mkfs.xfs -f $image2 1>/dev/null
 
     test -d $mount1 || mkdir $mount1
     test -d $mount2 || mkdir $mount2
@@ -55,8 +57,7 @@ function setup() {
 
     sudo chown -R `whoami` $mount1 $mount2
 
-  
-    $CWD/mhddfs -o allow_other,logfile=$logfile -o loglevel=0 $mount1 $mount2 $mount
+    $MHDDFS -o allow_other,logfile=$logfile -o loglevel=0 $mount1 $mount2 $mount
 }
 
 function teardown () {
