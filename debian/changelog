@@ -1,3 +1,10 @@
+mhddfs (0.1.24-1) unstable; urgency=low
+
+  * Applied extended attribute patch, thanks for
+    Glenn Washburn <gwashburn@Crossroads.com>.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Fri, 30 Oct 2009 09:52:00 +0300
+
 mhddfs (0.1.23-1) unstable; urgency=low
 
   * Fixed rename mechanizm if files are in different hdds, closes: #547172,

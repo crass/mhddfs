@@ -15,6 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+   Modified by Glenn Washburn <gwashburn@Crossroads.com>
+	   (added support for extended attributes.)
  */
 #define _XOPEN_SOURCE 500
 #include <fuse.h>
@@ -29,6 +31,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <utime.h>
+#include <attr/xattr.h>
 
 #include "parse_options.h"
 #include "tools.h"
@@ -876,6 +879,66 @@ static int mhdd_fsync(const char *path, int isdatasync,
 	return 0;
 }
 
+// Define extended attribute support
+static int mhdd_setxattr(const char *path, const char *attrname,
+                const char *attrval, size_t attrvalsize, int flags)
+{
+	path = find_path(path);
+	if (!path)
+		return -ENOENT;
+        
+	mhdd_debug(MHDD_MSG,
+		"mhdd_setxattr: path = %s name = %s value = %s size = %d\n",
+                path, attrname, attrval, attrvalsize);
+        if (setxattr(path, attrname, attrval, attrvalsize, flags) == -1)
+            return -errno;
+        return 0;
+}
+
+static int mhdd_getxattr(const char *path, const char *attrname, char *buf, size_t count)
+{
+        int size = 0;
+	path = find_path(path);
+	if (!path)
+		return -ENOENT;
+        
+	mhdd_debug(MHDD_MSG,
+		"mhdd_getxattr: path = %s name = %s bufsize = %d\n",
+                path, attrname, count);
+        if ((size=getxattr(path, attrname, buf, count)) == -1)
+            return -errno;
+        return size;
+}
+
+static int mhdd_listxattr(const char *path, char *buf, size_t count)
+{
+        int ret = 0;
+	path = find_path(path);
+	if (!path)
+		return -ENOENT;
+        
+	mhdd_debug(MHDD_MSG,
+		"mhdd_listxattr: path = %s bufsize = %d\n",
+                path, count);
+        if ((ret=listxattr(path, buf, count)) == -1)
+            return -errno;
+        return ret;
+}
+
+static int mhdd_removexattr(const char *path, const char *attrname)
+{
+	path = find_path(path);
+	if (!path)
+		return -ENOENT;
+        
+	mhdd_debug(MHDD_MSG,
+		"mhdd_removexattr: path = %s name = %s\n",
+                path, attrname);
+        if (removexattr(path, attrname) == -1)
+            return -errno;
+        return 0;
+}
+
 // functions links
 static struct fuse_operations mhdd_oper = {
 	.getattr    = mhdd_stat,
@@ -900,6 +963,10 @@ static struct fuse_operations mhdd_oper = {
 	.symlink    = mhdd_symlink,
 	.mknod      = mhdd_mknod,
 	.fsync      = mhdd_fsync,
+        .setxattr   = mhdd_setxattr,
+        .getxattr   = mhdd_getxattr,
+        .listxattr  = mhdd_listxattr,
+        .removexattr= mhdd_removexattr,
 };
 
 

@@ -15,6 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+   Modified by Glenn Washburn <gwashburn@Crossroads.com>
+	   (added support for extended attributes.)
  */
 #include <string.h>
 #include <stdlib.h>
@@ -28,6 +30,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <attr/xattr.h>
 
 #include "tools.h"
 #include "debug.h"
@@ -156,9 +159,17 @@ static int reopen_files(struct flist * file, const char *new_name)
 		}
 	}
 
-	free(rlist);
-	if (error)
+	if (error) {
+		free(rlist);
 		return -error;
+	}
+
+	/* change real_name */
+	for (i = 0; rlist[i]; i++) {
+		free(rlist[i]->real_name);
+		rlist[i]->real_name = strdup(new_name);
+	}
+	free(rlist);
 	return 0;
 }
 
@@ -195,7 +206,7 @@ int move_file(struct flist * file, off_t wsize)
 	if (size < wsize) size=wsize;
 
 	if (space > size) {
-		mhdd_debug(MHDD_MSG, "move_file: we have enouth space\n");
+		mhdd_debug(MHDD_MSG, "move_file: we have enough space\n");
 		return 0;
 	}
 
@@ -251,6 +262,14 @@ int move_file(struct flist * file, off_t wsize)
 	ftime.modtime = st.st_mtime;
 	utime(to, &ftime);
 
+        // extended attributes
+        if (copy_xattrs(from, to) == -1)
+            mhdd_debug(MHDD_MSG,
+                    "copy_xattrs: error copying xattrs from %s to %s\n",
+                    from, to);
+
+
+	from = strdup(from);
 	if ((ret = reopen_files(file, to)) == 0)
 		unlink(from);
 	else
@@ -259,7 +278,77 @@ int move_file(struct flist * file, off_t wsize)
 	mhdd_debug(MHDD_MSG, "move_file: %s -> %s: done, code=%d\n",
 		from, to, ret);
 	free(to);
+	free(from);
 	return ret;
+}
+
+int copy_xattrs(const char *from, const char *to)
+{
+        int listsize=0, attrvalsize=0;
+        char *listbuf=NULL, *attrvalbuf=NULL,
+                *name_begin=NULL, *name_end=NULL;
+
+        // if not xattrs on source, then do nothing
+        if ((listsize=listxattr(from, NULL, 0)) == 0)
+                return 0;
+
+        // get all extended attributes
+        listbuf=(char *)calloc(sizeof(char), listsize);
+        if (listxattr(from, listbuf, listsize) == -1)
+        {
+                mhdd_debug(MHDD_MSG,
+                        "listxattr: error listing xattrs on %s : %s\n",
+                        from, strerror(errno));
+                return -1;
+        }
+
+        // loop through each xattr
+        for(name_begin=listbuf, name_end=listbuf+1;
+                name_end < (listbuf + listsize); name_end++)
+        {
+                // skip the loop if we're not at the end of an attribute name
+                if (*name_end != '\0')
+                        continue;
+
+                // get the size of the extended attribute
+                attrvalsize = getxattr(from, name_begin, NULL, 0);
+                if (attrvalsize < 0)
+                {
+                        mhdd_debug(MHDD_MSG,
+                                "getxattr: error getting xattr size on %s name %s : %s\n",
+                                from, name_begin, strerror(errno));
+                        return -1;
+                }
+
+                // get the value of the extended attribute
+                attrvalbuf=(char *)calloc(sizeof(char), attrvalsize);
+                if (getxattr(from, name_begin, attrvalbuf, attrvalsize) < 0)
+                {
+                        mhdd_debug(MHDD_MSG,
+                                "getxattr: error getting xattr value on %s name %s : %s\n",
+                                from, name_begin, strerror(errno));
+                        return -1;
+                }
+
+                // set the value of the extended attribute on dest file
+                if (setxattr(to, name_begin, attrvalbuf, attrvalsize, 0) < 0)
+                {
+                        mhdd_debug(MHDD_MSG,
+                                "setxattr: error setting xattr value on %s name %s : %s\n",
+                                from, name_begin, strerror(errno));
+                        return -1;
+                }
+
+                free(attrvalbuf);
+
+                // point the pointer to the start of the attr name to the start
+                // of the next attr
+                name_begin=name_end+1;
+                name_end++;
+        }
+
+        free(listbuf);
+        return 0;
 }
 
 char * create_path(const char *dir, const char * file)
@@ -375,6 +464,13 @@ int create_parent_dirs(int dir_id, const char *path)
 			path_parent,
 			strerror(errno));
 	}
+
+        // copy extended attributes of parent dir
+        if (copy_xattrs(exists, path_parent) == -1)
+            mhdd_debug(MHDD_MSG,
+                    "copy_xattrs: error copying xattrs from %s to %s\n",
+                    exists, path_parent);
+
 	free(exists);
 	free(path_parent);
 	free(parent);
