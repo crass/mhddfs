@@ -32,6 +32,9 @@ FORTAR	=	src COPYING LICENSE README Makefile \
 VERSION	=	$(shell cat src/version.h  \
 	|grep '^.define'|grep '[[:space:]]VERSION[[:space:]]' \
 	|awk '{print $$3}'|sed 's/\"//g' )
+RELEASE	=	0
+
+SRCDIR	=	$(shell rpm --eval '%_sourcedir')
 
 all: $(TARGET)
 
@@ -44,6 +47,12 @@ mhddfs_$(VERSION).tar.gz: $(FORTAR) $(wildcard src/*)
 	tar --exclude=.svn -czvf $@ mhddfs-$(VERSION)
 	rm -fr mhddfs-$(VERSION)
 
+rpm: tarball
+	mkdir -p $(SRCDIR)
+	mv -f mhddfs_$(VERSION).tar.gz $(SRCDIR)
+	rpmbuild -ba mhddfs.spec --define 'version $(VERSION)' --define 'release $(RELEASE)'
+	cp $(shell rpm --eval '%_srcrpmdir')/mhddfs-$(VERSION)-$(RELEASE)* \
+		$(shell rpm --eval '%_rpmdir')/*/mhddfs-*$(VERSION)-$(RELEASE)* .
 
 $(TARGET): obj/obj-stamp $(OBJ)
 	gcc $(CFLAGS) $(OBJ) -o $@ $(LDFLAGS)
