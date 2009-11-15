@@ -65,8 +65,11 @@ obj/%.o: src/%.c
 	gcc $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -fr obj $(TARGET) pwrite_test statvfs
+	rm -fr obj $(TARGET) pwrite_test statvfs rename
 
+rename: tests/rename.c
+	gcc -o $@ $<
+	
 release_svn_thread:
 	@echo current version $(VERSION)
 	if ! svn ls http://svn.uvw.ru/mhddfs/tags| \
