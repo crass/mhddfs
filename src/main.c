@@ -555,110 +555,99 @@ static int mhdd_rename(const char *from, const char *to)
 {
 	mhdd_debug(MHDD_MSG, "mhdd_rename: from = %s to = %s\n", from, to);
 
+	int i, res;
+	struct stat sto, sfrom;
+	char *obj_from, *obj_to;
+	int from_is_dir = 0, to_is_dir = 0, from_is_file = 0, to_is_file = 0;
+	int to_dir_is_empty = 1;
+
 	if (strcmp(from, to) == 0)
 		return 0;
 
-	int i;
-	struct stat sto, sfrom;
-	char *obj_from = find_path(from), *obj_to = 0;
-	int to_exists = 0;
-	int to_is_exist_file = 0;
-	if (!obj_from)
-		return -ENOENT;
-	stat(obj_from, &sfrom);
-	/* seek exists to-object */
+	/* seek for possible errors */
 	for (i = 0; i < mhdd.cdirs; i++) {
-		obj_to = create_path(mhdd.dirs[i], to);
-		if (stat(obj_to, &sto) != 0) {
-			free(obj_to);
-			obj_to = 0;
-			continue;
-		}
-
-		if (S_ISDIR(sfrom.st_mode)) {
-			/* old path is dir, but new path isn't dir */
-			if (!S_ISDIR(sto.st_mode)) {
-				free(obj_from);
-				free(obj_to);
-				return -ENOTDIR;
-			}
-
-			/* target directory must be empty */
-			if (!dir_is_empty(obj_to)) {
-				free(obj_from);
-				free(obj_to);
-				return -ENOTEMPTY;
-			}
-		/* old path is file */
-		} else {
+		obj_to   = create_path(mhdd.dirs[i], to);
+		obj_from = create_path(mhdd.dirs[i], from);
+		if (stat(obj_to, &sto)) {
 			if (S_ISDIR(sto.st_mode)) {
-				free(obj_from);
-				free(obj_to);
-				return -EISDIR;
+				to_is_dir++;
+				if (!dir_is_empty(obj_to))
+					to_dir_is_empty = 0;
 			}
-			to_is_exist_file++;
+			else
+				to_is_file++;
 		}
-		free(obj_to);
-		to_exists = 1;
-	}
-
-	/* Here: new path is correct or doesnt exists */
-
-	if (!to_exists) {
-		/* is parent to path exist */
-		char *to_parent = get_parent_path(to);
-		if (find_path_id(to_parent) == -1) {
-			free(obj_from);
-			free(to_parent);
-			return -ENOENT;
+		if (stat(obj_from, &sfrom)) {
+			if (S_ISDIR (sfrom.st_mode))
+				from_is_dir++;
+			else
+				from_is_file++;
 		}
-		free(to_parent);
-		int from_dir_id = find_path_id(from);
-		create_parent_dirs(from_dir_id, to);
-		obj_to = create_path(mhdd.dirs[from_dir_id], to);
-		int res = rename(obj_from, obj_to);
 		free(obj_from);
 		free(obj_to);
-		if (res == -1)
-			return -errno;
-		return 0;
-	} else {
-		int from_dir_id = find_path_id(from);
-		obj_to = create_path(mhdd.dirs[from_dir_id], to);
-		create_parent_dirs(from_dir_id, to);
-		if (to_is_exist_file) {
 
-			/* rename */
-			int res = rename(obj_from, obj_to);
-			free(obj_from);
-			free(obj_to);
-			if (res == -1)
-				return -errno;
+		if (to_is_file && from_is_dir)
+			return -ENOTDIR;
+		if (to_is_file && to_is_dir)
+			return -ENOTEMPTY;
+		if (from_is_dir && !to_dir_is_empty)
+			return -ENOTEMPTY;
+	}
 
-			/* unlink exist files */
-			for (res = i = 0; i < mhdd.cdirs; i++) {
-				if (i == from_dir_id)
+	/* parent 'to' path doesn't exists */
+	char *pto = get_parent_path (to);
+	if (find_path_id(pto) == -1) {
+		free (pto);
+		return -ENOENT;
+	}
+	free (pto);
+
+	/* rename cycle */
+	for (i = 0; i < mhdd.cdirs; i++) {
+		obj_to   = create_path(mhdd.dirs[i], to);
+		obj_from = create_path(mhdd.dirs[i], from);
+		if (stat(obj_from, &sfrom) == 0) {
+			/* if from is dir and at the same time file,
+			   we only rename dir */
+			if (from_is_dir && from_is_file) {
+				if (!S_ISDIR(sfrom.st_mode)) {
+					free(obj_from);
+					free(obj_to);
 					continue;
+				}
+			}
 
-				obj_to = create_path(mhdd.dirs[i], to);
+			create_parent_dirs(i, obj_to);
+
+			mhdd_debug(MHDD_MSG, "mhdd_rename: rename %s -> %s\n",
+				obj_from, obj_to);
+			res = rename(obj_from, obj_to);
+			if (res == -1) {
+				free(obj_from);
+				free(obj_to);
+				return -errno;
+			}
+		} else {
+			/* from and to are files, so we must remove to files */
+			if (from_is_file && to_is_file && !from_is_dir) {
 				if (stat(obj_to, &sto) == 0) {
+					mhdd_debug(MHDD_MSG,
+						"mhdd_rename: unlink %s\n",
+						obj_to);
 					if (unlink(obj_to) == -1) {
-						res = res ? res : -errno;
+						free(obj_from);
+						free(obj_to);
+						return -errno;
 					}
 				}
-				free(obj_to);
 			}
-			return res;
 		}
 
-		/* rename */
-		int res = rename(obj_from, obj_to);
 		free(obj_from);
 		free(obj_to);
-		if (res == -1)
-			return -errno;
-		return 0;
 	}
+
+	return 0;
 }
 
 // .utimens
@@ -886,7 +875,7 @@ static int mhdd_setxattr(const char *path, const char *attrname,
 	path = find_path(path);
 	if (!path)
 		return -ENOENT;
-        
+
 	mhdd_debug(MHDD_MSG,
 		"mhdd_setxattr: path = %s name = %s value = %s size = %d\n",
                 path, attrname, attrval, attrvalsize);
@@ -901,7 +890,7 @@ static int mhdd_getxattr(const char *path, const char *attrname, char *buf, size
 	path = find_path(path);
 	if (!path)
 		return -ENOENT;
-        
+
 	mhdd_debug(MHDD_MSG,
 		"mhdd_getxattr: path = %s name = %s bufsize = %d\n",
                 path, attrname, count);
@@ -916,7 +905,7 @@ static int mhdd_listxattr(const char *path, char *buf, size_t count)
 	path = find_path(path);
 	if (!path)
 		return -ENOENT;
-        
+
 	mhdd_debug(MHDD_MSG,
 		"mhdd_listxattr: path = %s bufsize = %d\n",
                 path, count);
@@ -930,7 +919,7 @@ static int mhdd_removexattr(const char *path, const char *attrname)
 	path = find_path(path);
 	if (!path)
 		return -ENOENT;
-        
+
 	mhdd_debug(MHDD_MSG,
 		"mhdd_removexattr: path = %s name = %s\n",
                 path, attrname);
