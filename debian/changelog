@@ -1,3 +1,9 @@
+mhddfs (0.1.26-1) unstable; urgency=low
+
+  * Fixed memory leak in extended attribute patch.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Thu, 26 Nov 2009 00:37:42 +0300
+
 mhddfs (0.1.25-1) unstable; urgency=low
 
   * Rewite rename mechanizm to properly rename directories which are

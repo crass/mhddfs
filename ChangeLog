@@ -69,3 +69,6 @@ thanks to Konstantin Zavialov <konstantin.z@gmail.com>
 0.1.24
 * Applied extended attribute patch, thanks for
 Glenn Washburn <gwashburn@Crossroads.com>.
+
+0.1.26
+* Fixed memory leak in extended attribute patch

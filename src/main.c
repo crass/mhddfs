@@ -872,59 +872,65 @@ static int mhdd_fsync(const char *path, int isdatasync,
 static int mhdd_setxattr(const char *path, const char *attrname,
                 const char *attrval, size_t attrvalsize, int flags)
 {
-	path = find_path(path);
-	if (!path)
+	char * real_path = find_path(path);
+	if (!real_path)
 		return -ENOENT;
 
 	mhdd_debug(MHDD_MSG,
 		"mhdd_setxattr: path = %s name = %s value = %s size = %d\n",
-                path, attrname, attrval, attrvalsize);
-        if (setxattr(path, attrname, attrval, attrvalsize, flags) == -1)
-            return -errno;
+                real_path, attrname, attrval, attrvalsize);
+        int res = setxattr(real_path, attrname, attrval, attrvalsize, flags);
+        free(real_path);
+        if (res == -1) return -errno;
         return 0;
 }
 
 static int mhdd_getxattr(const char *path, const char *attrname, char *buf, size_t count)
 {
         int size = 0;
-	path = find_path(path);
-	if (!path)
+	char * real_path = find_path(path);
+	if (!real_path)
 		return -ENOENT;
 
 	mhdd_debug(MHDD_MSG,
 		"mhdd_getxattr: path = %s name = %s bufsize = %d\n",
-                path, attrname, count);
-        if ((size=getxattr(path, attrname, buf, count)) == -1)
-            return -errno;
+                real_path, attrname, count);
+        size = getxattr(real_path, attrname, buf, count);
+        free(real_path);
+        if (size == -1) return -errno;
         return size;
 }
 
 static int mhdd_listxattr(const char *path, char *buf, size_t count)
 {
         int ret = 0;
-	path = find_path(path);
-	if (!path)
+	char * real_path = find_path(path);
+	if (!real_path)
 		return -ENOENT;
 
 	mhdd_debug(MHDD_MSG,
 		"mhdd_listxattr: path = %s bufsize = %d\n",
-                path, count);
-        if ((ret=listxattr(path, buf, count)) == -1)
-            return -errno;
+                real_path, count);
+
+        ret=listxattr(real_path, buf, count);
+        free(real_path);
+        if (ret == -1) return -errno;
         return ret;
 }
 
 static int mhdd_removexattr(const char *path, const char *attrname)
 {
-	path = find_path(path);
-	if (!path)
+	char * real_path = find_path(path);
+	if (!real_path)
 		return -ENOENT;
 
 	mhdd_debug(MHDD_MSG,
 		"mhdd_removexattr: path = %s name = %s\n",
-                path, attrname);
-        if (removexattr(path, attrname) == -1)
-            return -errno;
+                real_path, attrname);
+
+        int res = removexattr(real_path, attrname);
+        free(real_path);
+        if (res == -1) return -errno;
         return 0;
 }
 
