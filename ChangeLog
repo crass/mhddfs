@@ -72,3 +72,7 @@ Glenn Washburn <gwashburn@Crossroads.com>.
 
 0.1.26
 * Fixed memory leak in extended attribute patch
+
+0.1.27
+* Fixed renaming directory bug, thanks for
+Nathan Grennan <dimka@cygnusx-1.org>

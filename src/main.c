@@ -568,7 +568,7 @@ static int mhdd_rename(const char *from, const char *to)
 	for (i = 0; i < mhdd.cdirs; i++) {
 		obj_to   = create_path(mhdd.dirs[i], to);
 		obj_from = create_path(mhdd.dirs[i], from);
-		if (stat(obj_to, &sto)) {
+		if (stat(obj_to, &sto) == 0) {
 			if (S_ISDIR(sto.st_mode)) {
 				to_is_dir++;
 				if (!dir_is_empty(obj_to))
@@ -577,7 +577,7 @@ static int mhdd_rename(const char *from, const char *to)
 			else
 				to_is_file++;
 		}
-		if (stat(obj_from, &sfrom)) {
+		if (stat(obj_from, &sfrom) == 0) {
 			if (S_ISDIR (sfrom.st_mode))
 				from_is_dir++;
 			else

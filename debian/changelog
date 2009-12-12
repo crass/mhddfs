@@ -1,3 +1,10 @@
+mhddfs (0.1.27-1) unstable; urgency=high
+
+  * Fixed renaming a directory bug,
+    thanks for Nathan Grennan <dimka@cygnusx-1.org>.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Sat, 12 Dec 2009 14:24:22 +0300
+
 mhddfs (0.1.26-1) unstable; urgency=low
 
   * Fixed memory leak in extended attribute patch.

@@ -66,6 +66,8 @@ obj/%.o: src/%.c
 
 clean:
 	rm -fr obj $(TARGET) pwrite_test statvfs rename
+	fusermount -u rename-test || true
+	rm -fr rename-test/mnt
 
 rename: tests/rename.c
 	gcc -o $@ $<
@@ -136,8 +138,22 @@ ptest:
 
 test-images: test1.img test2.img
 
+rename-test: $(TARGET)
+	fusermount -u $@/mnt || true
+	rm -fr $@
+	mkdir $@ $@/1 $@/2 $@/mnt
+	./$(TARGET) $@/1 $@/2 $@/mnt
+	touch $@/mnt/test-file
+	mv $@/mnt/test-file $@/mnt/test-file.1
+	mkdir $@/mnt/test-dir
+	mv $@/mnt/test-dir $@/mnt/test-dir.1
+	fusermount -u $@/mnt
+	rm -fr $@
+	@echo '******************** PASSED ***********************'
+
 .PHONY: all clean open_project tarball \
 	release_svn_thread test-mount test-umount \
 	images-mount test tests
 
 include $(wildcard obj/*.d)
+
