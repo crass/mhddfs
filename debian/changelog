@@ -1,3 +1,9 @@
+mhddfs (0.1.28-1) unstable; urgency=high
+
+  * Fixed creating parent directories when item is moved between shares. 
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Fri, 18 Dec 2009 22:59:15 +0300
+
 mhddfs (0.1.27-1) unstable; urgency=high
 
   * Fixed renaming a directory bug,
