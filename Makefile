@@ -140,20 +140,25 @@ test-images: test1.img test2.img
 
 rename-test: $(TARGET)
 	fusermount -u $@/mnt || true
+	rm -f logfile.log
 	rm -fr $@
 	mkdir $@ $@/1 $@/2 $@/mnt
-	./$(TARGET) $@/1 $@/2 $@/mnt
+	./$(TARGET) $@/1 $@/2 $@/mnt -o logfile=logfile.log,loglevel=0
 	touch $@/mnt/test-file
 	mv $@/mnt/test-file $@/mnt/test-file.1
 	mkdir $@/mnt/test-dir
 	mv $@/mnt/test-dir $@/mnt/test-dir.1
+	mkdir $@/2/test-dir.2
+	touch $@/2/test-dir.2/123
+	mkdir $@/mnt/test-dir.3
+	mv $@/mnt/test-dir.2/123 $@/mnt/test-dir.3
 	fusermount -u $@/mnt
 	rm -fr $@
 	@echo '******************** PASSED ***********************'
 
 .PHONY: all clean open_project tarball \
 	release_svn_thread test-mount test-umount \
-	images-mount test tests
+	images-mount test tests rename-test
 
 include $(wildcard obj/*.d)
 

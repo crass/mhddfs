@@ -617,7 +617,7 @@ static int mhdd_rename(const char *from, const char *to)
 				}
 			}
 
-			create_parent_dirs(i, obj_to);
+			create_parent_dirs(i, to);
 
 			mhdd_debug(MHDD_MSG, "mhdd_rename: rename %s -> %s\n",
 				obj_from, obj_to);
