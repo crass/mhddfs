@@ -1,3 +1,9 @@
+mhddfs (0.1.29-1) UNRELEASE; urgency=low
+
+  * Building under FreeBSD is fixed.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Mon, 11 Jan 2010 11:49:17 +0300
+
 mhddfs (0.1.28-1) unstable; urgency=high
 
   * Fixed creating parent directories when item is moved between shares. 

@@ -31,7 +31,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <utime.h>
+
+#ifndef WITHOUT_XATTR
 #include <attr/xattr.h>
+#endif
 
 #include "parse_options.h"
 #include "tools.h"
@@ -833,7 +836,7 @@ static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
 	return -errno;
 }
 
-#if _POSIX_SYNCHRONIZED_IO + 0 > 0
+#if _POSIX_SYNCHRONIZED_IO + 0 > 0 || defined(__FreeBSD__)
 #undef HAVE_FDATASYNC
 #else
 #define HAVE_FDATASYNC 1
@@ -869,6 +872,8 @@ static int mhdd_fsync(const char *path, int isdatasync,
 }
 
 // Define extended attribute support
+
+#ifndef WITHOUT_XATTR
 static int mhdd_setxattr(const char *path, const char *attrname,
                 const char *attrval, size_t attrvalsize, int flags)
 {
@@ -884,7 +889,9 @@ static int mhdd_setxattr(const char *path, const char *attrname,
         if (res == -1) return -errno;
         return 0;
 }
+#endif
 
+#ifndef WITHOUT_XATTR
 static int mhdd_getxattr(const char *path, const char *attrname, char *buf, size_t count)
 {
         int size = 0;
@@ -900,7 +907,9 @@ static int mhdd_getxattr(const char *path, const char *attrname, char *buf, size
         if (size == -1) return -errno;
         return size;
 }
+#endif
 
+#ifndef WITHOUT_XATTR
 static int mhdd_listxattr(const char *path, char *buf, size_t count)
 {
         int ret = 0;
@@ -917,7 +926,9 @@ static int mhdd_listxattr(const char *path, char *buf, size_t count)
         if (ret == -1) return -errno;
         return ret;
 }
+#endif
 
+#ifndef WITHOUT_XATTR
 static int mhdd_removexattr(const char *path, const char *attrname)
 {
 	char * real_path = find_path(path);
@@ -933,35 +944,38 @@ static int mhdd_removexattr(const char *path, const char *attrname)
         if (res == -1) return -errno;
         return 0;
 }
+#endif
 
 // functions links
 static struct fuse_operations mhdd_oper = {
-	.getattr    = mhdd_stat,
-	.statfs     = mhdd_statfs,
-	.readdir    = mhdd_readdir,
-	.readlink   = mhdd_readlink,
-	.open       = mhdd_fileopen,
-	.release    = mhdd_release,
-	.read       = mhdd_read,
-	.write      = mhdd_write,
-	.create     = mhdd_create,
-	.truncate   = mhdd_truncate,
-	.ftruncate  = mhdd_ftruncate,
-	.access     = mhdd_access,
-	.mkdir      = mhdd_mkdir,
-	.rmdir      = mhdd_rmdir,
-	.unlink     = mhdd_unlink,
-	.rename     = mhdd_rename,
-	.utimens    = mhdd_utimens,
-	.chmod      = mhdd_chmod,
-	.chown      = mhdd_chown,
-	.symlink    = mhdd_symlink,
-	.mknod      = mhdd_mknod,
-	.fsync      = mhdd_fsync,
-        .setxattr   = mhdd_setxattr,
-        .getxattr   = mhdd_getxattr,
-        .listxattr  = mhdd_listxattr,
-        .removexattr= mhdd_removexattr,
+	.getattr    	= mhdd_stat,
+	.statfs     	= mhdd_statfs,
+	.readdir    	= mhdd_readdir,
+	.readlink   	= mhdd_readlink,
+	.open       	= mhdd_fileopen,
+	.release    	= mhdd_release,
+	.read       	= mhdd_read,
+	.write      	= mhdd_write,
+	.create     	= mhdd_create,
+	.truncate   	= mhdd_truncate,
+	.ftruncate  	= mhdd_ftruncate,
+	.access     	= mhdd_access,
+	.mkdir      	= mhdd_mkdir,
+	.rmdir      	= mhdd_rmdir,
+	.unlink     	= mhdd_unlink,
+	.rename     	= mhdd_rename,
+	.utimens    	= mhdd_utimens,
+	.chmod      	= mhdd_chmod,
+	.chown      	= mhdd_chown,
+	.symlink    	= mhdd_symlink,
+	.mknod      	= mhdd_mknod,
+	.fsync      	= mhdd_fsync,
+#ifndef WITHOUT_XATTR
+        .setxattr   	= mhdd_setxattr,
+        .getxattr   	= mhdd_getxattr,
+        .listxattr  	= mhdd_listxattr,
+        .removexattr	= mhdd_removexattr,
+#endif
 };
 
 

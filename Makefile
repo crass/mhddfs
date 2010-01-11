@@ -22,7 +22,12 @@ DEPS	=	$(OBJ:obj/%.o=obj/%.d)
 
 TARGET	=	mhddfs
 
-CFLAGS	=	-Wall $(shell pkg-config fuse --cflags) -DFUSE_USE_VERSION=26 -MMD
+CFLAGS	=	-Wall $(shell pkg-config fuse --cflags) \
+			-DFUSE_USE_VERSION=26 -MMD
+ifdef WITHOUT_XATTR
+CFLAGS	+=	-DWITHOUT_XATTR
+endif
+
 LDFLAGS	=	$(shell pkg-config fuse --libs)
 
 FORTAR	=	src COPYING LICENSE README Makefile \
@@ -37,6 +42,10 @@ RELEASE	=	0
 SRCDIR	=	$(shell rpm --eval '%_sourcedir')
 
 all: $(TARGET)
+
+help:
+	@echo usage: make - to build program
+	@echo make WITHOUT_XATTR=1 - to build program without xattr functional
 
 tarball: mhddfs_$(VERSION).tar.gz
 	@echo '>>>> mhddfs_$(VERSION).tar.gz created'
@@ -158,7 +167,8 @@ rename-test: $(TARGET)
 
 .PHONY: all clean open_project tarball \
 	release_svn_thread test-mount test-umount \
-	images-mount test tests rename-test
+	images-mount test tests rename-test \
+	help
 
 include $(wildcard obj/*.d)
 
