@@ -1,3 +1,9 @@
+mhddfs (0.1.30-1) UNRELEASE; urgency=low
+
+  * Another BSD build problem.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Mon, 11 Jan 2010 23:07:30 +0300
+
 mhddfs (0.1.29-1) UNRELEASE; urgency=low
 
   * Building under FreeBSD is fixed.
