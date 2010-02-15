@@ -7,6 +7,7 @@ use utf8;
 use open qw(:std :utf8);
 
 use POSIX;
+use Encode qw(decode);
 
 unless (@ARGV) {
     print "Usage $0 object1 object2\n";
@@ -14,6 +15,7 @@ unless (@ARGV) {
 
 
 for (@ARGV) {
+    $_ = decode(utf8 => $_) unless utf8::is_utf8($_);
     print "Test $_ R_OK...";
     if (POSIX::access($_, &POSIX::R_OK)) {
         print " ok\n";
