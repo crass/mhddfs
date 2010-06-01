@@ -123,6 +123,51 @@ static int mhddfs_opt_proc(void *data,
 	return 1;
 }
 
+static void check_if_unique_mountpoints(void)
+{
+	int i, j;
+	struct stat * stats = calloc(mhdd.cdirs, sizeof(struct stat));
+
+	for (i = 0; i < mhdd.cdirs; i++) {
+		if (stat(mhdd.dirs[i], stats + i) != 0)
+			memset(stats + i, 0, sizeof(struct stat));
+
+
+		for (j = 0; j < i; j++) {
+			if (strcmp(mhdd.dirs[i], mhdd.dirs[j]) != 0) {
+				/*  mountdir isn't unique */
+				if (stats[j].st_dev != stats[i].st_dev)
+					continue;
+				if (stats[j].st_ino != stats[i].st_ino)
+					continue;
+				if (!stats[i].st_dev)
+					continue;
+				if (!stats[i].st_ino)
+					continue;
+			}
+
+			fprintf(stderr,
+				"mhddfs: Duplicate directories: %s %s\n"
+				"\t%s was excluded from dirlist\n",
+				mhdd.dirs[i],
+				mhdd.dirs[j],
+				mhdd.dirs[i]
+			);
+
+			free(mhdd.dirs[i]);
+			mhdd.dirs[i] = 0;
+
+			for (j = i; j < mhdd.cdirs - 1; j++)
+				mhdd.dirs[j] = mhdd.dirs[j+1];
+			mhdd.cdirs--;
+			i--;
+			break;
+		}
+	}
+
+	free(stats);
+}
+
 struct fuse_args * parse_options(int argc, char *argv[])
 {
 	struct fuse_args * args=calloc(1, sizeof(struct fuse_args));
@@ -141,6 +186,8 @@ struct fuse_args * parse_options(int argc, char *argv[])
 	if (mhdd.cdirs<3) usage(stderr);
 	mhdd.mount=mhdd.dirs[--mhdd.cdirs];
 	mhdd.dirs[mhdd.cdirs]=0;
+
+	check_if_unique_mountpoints();
 
 	for (i=l=0; i<mhdd.cdirs; i++) l += strlen(mhdd.dirs[i])+2;
 	l += sizeof(FUSE_MP_OPT_STR);

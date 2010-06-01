@@ -1,8 +1,10 @@
 mhddfs (0.1.32) UNRELEASE; urgency=low
 
   * Switch to dpkg-source 3.0 (native) format.
+  * Added startup check to remove duplicaties of mount directories,
+  	closes: #582888.
 
- -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 01 Jun 2010 13:07:05 +0400
+ -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 01 Jun 2010 15:09:37 +0400
 
 mhddfs (0.1.31-1) unstable; urgency=low
 
