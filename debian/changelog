@@ -1,8 +1,10 @@
-mhddfs (0.1.32) UNRELEASE; urgency=low
+mhddfs (0.1.32) unstable; urgency=low
 
   * Switch to dpkg-source 3.0 (native) format.
   * Added startup check to remove duplicaties of mount directories,
   	closes: #582888.
+  * Debian is upstream linux variant, so we will use debian native
+    package format.
 
  -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 01 Jun 2010 15:09:37 +0400
 
