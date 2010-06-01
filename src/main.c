@@ -59,19 +59,31 @@ static int mhdd_stat(const char *file_name, struct stat *buf)
 //statvfs
 static int mhdd_statfs(const char *path, struct statvfs *buf)
 {
-	int i;
+	int i, j;
 	struct statvfs * stats;
+	struct stat st;
+	dev_t * devices;
 
 	mhdd_debug(MHDD_MSG, "mhdd_statfs: %s\n", path);
 
 	stats = calloc(mhdd.cdirs, sizeof(struct statvfs));
+	devices = calloc(mhdd.cdirs, sizeof(dev_t));
 
 	for (i = 0; i < mhdd.cdirs; i++) {
 		int ret = statvfs(mhdd.dirs[i], stats+i);
 		if (ret != 0) {
 			free(stats);
+			free(devices);
 			return -errno;
 		}
+
+		ret = stat(mhdd.dirs[i], &st);
+		if (ret != 0) {
+			free(stats);
+			free(devices);
+			return -errno;
+		}
+		devices[i] = st.st_dev;
 	}
 
 	unsigned long
@@ -103,6 +115,21 @@ static int mhdd_statfs(const char *path, struct statvfs *buf)
 	memcpy(buf, stats, sizeof(struct statvfs));
 
 	for (i = 1; i<mhdd.cdirs; i++) {
+
+		/* if the device already processed, skip it */
+		if (devices[i]) {
+			int dup_found = 0;
+			for (j = 0; j < i; j++) {
+				if (devices[j] == devices[i]) {
+					dup_found = 1;
+					break;
+				}
+			}
+
+			if (dup_found)
+				continue;
+		}
+
 		if (buf->f_namemax<stats[i].f_namemax) {
 			buf->f_namemax = stats[i].f_namemax;
 		}
@@ -113,8 +140,9 @@ static int mhdd_statfs(const char *path, struct statvfs *buf)
 		buf->f_bfree  +=  stats[i].f_bfree;
 		buf->f_blocks +=  stats[i].f_blocks;
 	}
-	free(stats);
 
+	free(stats);
+	free(devices);
 	return 0;
 }
 

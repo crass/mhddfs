@@ -76,3 +76,6 @@ Glenn Washburn <gwashburn@Crossroads.com>.
 0.1.27
 * Fixed renaming directory bug, thanks for
 Nathan Grennan <dimka@cygnusx-1.org>
+
+0.1.31
+* Fixed statvfs if a few shares are placed onto one device.

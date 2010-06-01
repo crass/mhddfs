@@ -2,8 +2,8 @@ Source: mhddfs
 Section: utils
 Priority: extra
 Maintainer: Dmitry E. Oboukhov <unera@debian.org>
-Build-Depends: debhelper (>= 5), libfuse-dev, pkg-config
-Standards-Version: 3.8.2
+Build-Depends: debhelper (>= 5), libfuse-dev, pkg-config, libattr1-dev
+Standards-Version: 3.8.4
 Homepage: http://mhddfs.uvw.ru
 Vcs-Browser: http://svn.uvw.ru/mhddfs/trunk
 
