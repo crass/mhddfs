@@ -1,6 +1,6 @@
-mhddfs (0.1.31-2) UNRELEASE; urgency=low
+mhddfs (0.1.32) UNRELEASE; urgency=low
 
-  * Switch to dpkg-source 3.0 (quilt) format.
+  * Switch to dpkg-source 3.0 (native) format.
 
  -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 01 Jun 2010 13:07:05 +0400
 
