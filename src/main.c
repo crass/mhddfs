@@ -19,6 +19,7 @@
 	   (added support for extended attributes.)
  */
 #define _XOPEN_SOURCE 500
+#define _BSD_SOURCE 1
 #include <fuse.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -703,7 +704,7 @@ static int mhdd_utimens(const char *path, const struct timespec ts[2])
 		tv[1].tv_sec = ts[1].tv_sec;
 		tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
-		res = utimes(object, tv);
+		res = lutimes(object, tv);
 		free(object);
 		if (res == -1)
 			return -errno;

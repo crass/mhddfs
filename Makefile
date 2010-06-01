@@ -145,6 +145,11 @@ ptest:
 	-./$@
 	rm -f $@
 
+symlinks_test: $(TARGET)
+	bash tests/utimes.sh
+
+
+
 test-images: test1.img test2.img
 
 rename-test: $(TARGET)

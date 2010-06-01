@@ -82,3 +82,6 @@ Nathan Grennan <dimka@cygnusx-1.org>
 
 0.1.32
 * Added startup check to remove duplicaties of mount directories.
+
+0.1.33
+* Symlinks are processed properly (set date/time).
