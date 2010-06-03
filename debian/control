@@ -9,7 +9,8 @@ Vcs-Browser: http://svn.uvw.ru/mhddfs/trunk
 
 Package: mhddfs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, fuse-utils
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ fuse-utils [!kfreebsd-amd64 !kfreebsd-i386]
 Description: file system for unifying several mount points into one
  This FUSE-based file system allows mount points (or directories) to be
  combined, simulating a single big volume which can merge several hard
