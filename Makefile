@@ -37,11 +37,30 @@ FORTAR	=	src COPYING LICENSE README Makefile \
 VERSION	=	$(shell cat src/version.h  \
 	|grep '^.define'|grep '[[:space:]]VERSION[[:space:]]' \
 	|awk '{print $$3}'|sed 's/\"//g' )
+
+DEBVERSION =	$(shell \
+	head -n 1 debian/changelog \
+		| awk '{print $$2}' \
+		| sed 's/^.//' | sed 's/.$$//' \
+		| sed 's/-[[:digit:]]\+$$//' \
+)
+
 RELEASE	=	0
 
 SRCDIR	=	$(shell rpm --eval '%_sourcedir')
 
+
+ifeq ($(DEBVERSION), $(VERSION))
 all: $(TARGET)
+else
+all: update_version $(TARGET)
+endif
+
+update_version:
+	@echo Updating upstream version from $(VERSION) to $(DEBVERSION)...
+	@sleep 5
+	perl -pi -e 's/^(#define\s+VERSION\s+).*/$$1 "$(DEBVERSION)"/' \
+		src/version.h
 
 help:
 	@echo usage: make - to build program
@@ -173,7 +192,7 @@ rename-test: $(TARGET)
 .PHONY: all clean open_project tarball \
 	release_svn_thread test-mount test-umount \
 	images-mount test tests rename-test \
-	help
+	help update_version
 
 include $(wildcard obj/*.d)
 
