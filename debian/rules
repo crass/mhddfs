@@ -4,7 +4,7 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-MHDDFS_BUILDFLAGS	= ""
+MHDDFS_BUILDFLAGS	=
 
 FREEBSD_FLAGS	= $(shell \
 	if `dpkg-architecture -qDEB_BUILD_ARCH|grep -q 'kfreebsd'`; then \
