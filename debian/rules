@@ -4,11 +4,21 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+MHDDFS_BUILDFLAGS	= ""
+
+FREEBSD_FLAGS	= $(shell \
+	if `dpkg-architecture -qDEB_BUILD_ARCH|grep -q 'kfreebsd'`; then \
+		echo WITHOUT_XATTR=1; \
+	fi \
+)
+
+MHDDFS_BUILDFLAGS	+= $(FREEBSD_FLAGS)
+
 build: build-stamp
 
 build-stamp: 
 	dh_testdir
-	make
+	make $(MHDDFS_BUILDFLAGS)
 	touch $@
 
 clean:

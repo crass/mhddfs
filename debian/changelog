@@ -1,3 +1,10 @@
+mhddfs (0.1.35) unstable; urgency=low
+
+  * Debian/kfreebsd architectures are built using WITHOUT_XATTR=1 build flag,
+    fixes a few build warnings.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 15 Jun 2010 09:44:23 +0400
+
 mhddfs (0.1.34) unstable; urgency=low
 
   * Fixed dependencies on freebsd.
