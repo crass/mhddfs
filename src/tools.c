@@ -43,31 +43,51 @@
 // get diridx for maximum free space
 int get_free_dir(void)
 {
-	int i, max;
+	int i, max, max_perc, max_perc_space = 0;
 	struct statvfs stf;
-	fsblkcnt_t max_space=0;
+	fsblkcnt_t max_space = 0;
 
-	for (max=i=0; i<mhdd.cdirs; i++)
-	{
-		if (statvfs(mhdd.dirs[i], &stf)!=0) continue;
+	for (max = i = 0; i < mhdd.cdirs; i++) {
+
+		if (statvfs(mhdd.dirs[i], &stf) != 0)
+			continue;
 		fsblkcnt_t space  = stf.f_bsize;
 		space *= stf.f_bavail;
 
-		if (space>=mhdd.move_limit) return i;
+		if (mhdd.move_limit < 100) {
+			fsblkcnt_t perclimit =
+				stf.f_blocks * (mhdd.move_limit + 1) / 100;
+			int perc;
 
-		if(space>max_space)
-		{
-			max_space=space;
-			max=i;
+			if (stf.f_bavail >= perclimit)
+				return i;
+
+			perc = 100 * stf.f_bavail / stf.f_blocks;
+
+			if (perc > max_perc_space) {
+				max_perc_space = perc;
+				max_perc = i;
+			}
+		} else {
+			if (space >= mhdd.move_limit)
+				return i;
+		}
+
+		if(space > max_space) {
+			max_space = space;
+			max = i;
 		}
 	}
 
-	if (!max_space)
-	{
+
+	if (!max_space && !max_perc_space) {
 		mhdd_debug(MHDD_INFO,
 			"get_free_dir: Can't find freespace\n");
 		return -1;
 	}
+
+	if (max_perc_space)
+		return max_perc;
 	return max;
 }
 

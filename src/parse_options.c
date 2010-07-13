@@ -46,6 +46,10 @@ struct mhdd_config mhdd={0};
 #define FUSE_MP_OPT_STR "-ofsname=mhddfs#"
 #endif
 
+/* the number less than 100 is in percent, more than 100 is in bytes */
+/* the value by mhddfs 0.1.35 was 4 * 1024 * 1024 * 1024 */
+#define DEFAULT_MLIMIT 25
+
 static struct fuse_opt mhddfs_opts[]={
 	MHDDFS_OPT("mlimit=%s",   mlimit_str, 0),
 	MHDDFS_OPT("logfile=%s",  debug_file, 0),
@@ -56,7 +60,6 @@ static struct fuse_opt mhddfs_opts[]={
 
 	FUSE_OPT_END
 };
-
 
 static void add_mhdd_dirs(const char * dir)
 {
@@ -246,10 +249,12 @@ struct fuse_args * parse_options(int argc, char *argv[])
 		setvbuf(mhdd.debug, NULL, _IONBF, 0);
 	}
 
-	mhdd.move_limit=4ll*1024*1024*1024;
+	mhdd.move_limit = DEFAULT_MLIMIT;
+
 	if (mhdd.mlimit_str)
 	{
 		int len=strlen(mhdd.mlimit_str);
+
 		if (len)
 		{
 			switch(mhdd.mlimit_str[len-1])
@@ -274,15 +279,32 @@ struct fuse_args * parse_options(int argc, char *argv[])
 					mhdd.move_limit*=1024;
 					break;
 
+				case '%':
+					mhdd.mlimit_str[len-1]=0;
+					mhdd.move_limit=atoll(mhdd.mlimit_str);
+					break;
+
 				default:
 					mhdd.move_limit=atoll(mhdd.mlimit_str);
 					break;
 			}
 		}
-		if (mhdd.move_limit<50*1024*1024) mhdd.move_limit=50*1024*1024;
+
+		if (mhdd.move_limit < 50*1024*1024) {
+			if (!mhdd.move_limit) {
+				mhdd.move_limit = DEFAULT_MLIMIT;
+			} else {
+				if (mhdd.move_limit >= 100)
+					mhdd.move_limit = 50*1024*1024;
+			}
+		}
 	}
-	fprintf(stderr, "mhddfs: move size limit %lld bytes\n",
-			(long long)mhdd.move_limit);
+	if (mhdd.move_limit < 100)
+		fprintf(stderr, "mhddfs: move size limit %lld%%\n",
+				(long long)mhdd.move_limit);
+	else
+		fprintf(stderr, "mhddfs: move size limit %lld bytes\n",
+				(long long)mhdd.move_limit);
 
 	mhdd_debug(MHDD_MSG, " >>>>> mhdd " VERSION " started <<<<<\n");
 

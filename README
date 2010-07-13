@@ -25,11 +25,12 @@ with an "-o option" you can specify some additional options:
         less than the threshold specified then a drive containing
         most free space will be choosen.
 
-Default value is 4G, minimum value is 100M.
+Default value is 25%, minimum value is 100M.
 This option accepts suffixes:
 [mM] - megabytes
 [gG] - gigabytes
 [kK] - kilobytes
+[%]  - percent
 
 For an information about the additional  options  see  output  of
 'mhddfs -h'.

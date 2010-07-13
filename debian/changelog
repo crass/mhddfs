@@ -1,3 +1,10 @@
+mhddfs (0.1.36) unstable; urgency=low
+
+  * Since now mhddfs uses 'mlimit' option in percent,
+    thanks for Robert de Bath <robert@tvisiontech.co.uk>, closes: #588892.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 13 Jul 2010 15:18:37 +0400
+
 mhddfs (0.1.35) unstable; urgency=low
 
   * Debian/kfreebsd architectures are built using WITHOUT_XATTR=1 build flag,
