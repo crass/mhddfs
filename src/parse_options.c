@@ -46,9 +46,10 @@ struct mhdd_config mhdd={0};
 #define FUSE_MP_OPT_STR "-ofsname=mhddfs#"
 #endif
 
-/* the number less than 100 is in percent, more than 100 is in bytes */
-/* the value by mhddfs 0.1.35 was 4 * 1024 * 1024 * 1024 */
-#define DEFAULT_MLIMIT 25
+/* the number less (or equal) than 100 is in percent,
+   more than 100 is in bytes */
+#define DEFAULT_MLIMIT ( 4l * 1024 * 1024 * 1024 )
+#define MINIMUM_MLIMIT ( 50l * 1024 * 1024 )
 
 static struct fuse_opt mhddfs_opts[]={
 	MHDDFS_OPT("mlimit=%s",   mlimit_str, 0),
@@ -253,10 +254,9 @@ struct fuse_args * parse_options(int argc, char *argv[])
 
 	if (mhdd.mlimit_str)
 	{
-		int len=strlen(mhdd.mlimit_str);
+		int len = strlen(mhdd.mlimit_str);
 
-		if (len)
-		{
+		if (len) {
 			switch(mhdd.mlimit_str[len-1])
 			{
 				case 'm':
@@ -290,16 +290,16 @@ struct fuse_args * parse_options(int argc, char *argv[])
 			}
 		}
 
-		if (mhdd.move_limit < 50*1024*1024) {
+		if (mhdd.move_limit < MINIMUM_MLIMIT) {
 			if (!mhdd.move_limit) {
 				mhdd.move_limit = DEFAULT_MLIMIT;
 			} else {
-				if (mhdd.move_limit >= 100)
-					mhdd.move_limit = 50*1024*1024;
+				if (mhdd.move_limit > 100)
+					mhdd.move_limit = MINIMUM_MLIMIT;
 			}
 		}
 	}
-	if (mhdd.move_limit < 100)
+	if (mhdd.move_limit <= 100)
 		fprintf(stderr, "mhddfs: move size limit %lld%%\n",
 				(long long)mhdd.move_limit);
 	else

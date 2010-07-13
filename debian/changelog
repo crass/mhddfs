@@ -1,4 +1,11 @@
-mhddfs (0.1.36) unstable; urgency=low
+mhddfs (0.1.37) unstable; urgency=low
+
+  * Old default mlimit is used.
+  * mlimit=100% is a reasonable request.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Tue, 13 Jul 2010 17:05:40 +0400
+
+mhddfs (0.1.36) experimental; urgency=low
 
   * Since now mhddfs uses 'mlimit' option in percent,
     thanks for Robert de Bath <robert@tvisiontech.co.uk>, closes: #588892.

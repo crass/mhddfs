@@ -54,13 +54,21 @@ int get_free_dir(void)
 		fsblkcnt_t space  = stf.f_bsize;
 		space *= stf.f_bavail;
 
-		if (mhdd.move_limit < 100) {
-			fsblkcnt_t perclimit =
-				stf.f_blocks * (mhdd.move_limit + 1) / 100;
+		if (mhdd.move_limit <= 100) {
+
 			int perc;
 
-			if (stf.f_bavail >= perclimit)
-				return i;
+			if (mhdd.move_limit != 100) {
+				fsblkcnt_t perclimit = stf.f_blocks;
+
+				if (mhdd.move_limit != 99) {
+					perclimit *= mhdd.move_limit + 1;
+					perclimit /= 100;
+				}
+
+				if (stf.f_bavail >= perclimit)
+					return i;
+			}
 
 			perc = 100 * stf.f_bavail / stf.f_blocks;
 
