@@ -32,6 +32,10 @@ This option accepts suffixes:
 [kK] - kilobytes
 [%]  - percent
 
+If mlimit is equal 100% or contain a number which is more than the
+largest of mount directories, mhddfs will try to allocate files
+regularly.
+
 For an information about the additional  options  see  output  of
 'mhddfs -h'.
 
