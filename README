@@ -113,13 +113,6 @@ File system's functions
 
 Most of the functions are supported.
 
-Some are not (and it seems will not be supported):
-- hardlinks (no reason use a hard links in a file system working
-  on a many nodes)
-
-Not implemented yet:
-- extended file attributes (xattr).
-
 Functions are supported:
 - get/set attributes of file system objects;
 - get/set file system information (total size, size of
@@ -129,6 +122,9 @@ Functions are supported:
 - symbolic links;
 - device files, sockets and fifo;
 - file locks;
+- hardlinks (only on a single device; no moving support for 
+  hardlinked files)
+- extended file attributes (xattr);
 
 Install
 ~~~~~~~

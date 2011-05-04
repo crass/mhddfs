@@ -1,3 +1,10 @@
+mhddfs (0.1.38) unstable; urgency=low
+
+  * Apply hardlinks patch, big thanks for patch to
+    Dermot Duffy <dermot.duffy@gmail.com>.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Wed, 04 May 2011 12:23:01 +0400
+
 mhddfs (0.1.37) unstable; urgency=low
 
   * Old default mlimit is used.

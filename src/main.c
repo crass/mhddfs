@@ -809,6 +809,35 @@ static int mhdd_symlink(const char *from, const char *to)
 	return -errno;
 }
 
+// link
+static int mhdd_link(const char *from, const char *to)
+{
+	mhdd_debug(MHDD_MSG, "mhdd_link: from = %s to = %s\n", from, to);
+
+	int dir_id = find_path_id(from);
+
+	if (dir_id == -1) {
+		errno = ENOENT;
+		return -errno;
+	}
+
+	int res = create_parent_dirs(dir_id, to);
+	if (res != 0) {
+		return res;
+	}
+
+	char *path_from = create_path(mhdd.dirs[dir_id], from);
+	char *path_to = create_path(mhdd.dirs[dir_id], to);
+
+	res = link(path_from, path_to);
+	free(path_from);
+	free(path_to);
+
+	if (res == 0)
+		return 0;
+	return -errno;
+}
+
 // mknod
 static int mhdd_mknod(const char *path, mode_t mode, dev_t rdev)
 {
@@ -999,6 +1028,7 @@ static struct fuse_operations mhdd_oper = {
 	.symlink    	= mhdd_symlink,
 	.mknod      	= mhdd_mknod,
 	.fsync      	= mhdd_fsync,
+	.link		= mhdd_link,
 #ifndef WITHOUT_XATTR
         .setxattr   	= mhdd_setxattr,
         .getxattr   	= mhdd_getxattr,

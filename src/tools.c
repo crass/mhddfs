@@ -233,6 +233,17 @@ int move_file(struct flist * file, off_t wsize)
 			from, strerror(errno));
 		return -errno;
 	}
+
+        /* Hard link support is limited to a single device, and files with
+           >1 hardlinks cannot be moved between devices since this would
+           (a) result in partial files on the source device (b) not free
+           the space from the source device during unlink. */
+	if (st.st_nlink > 1) {
+		mhdd_debug(MHDD_MSG, "move_file: cannot move "
+			"files with >1 hardlinks\n");
+		return -ENOTSUP;
+	}
+
 	size = st.st_size;
 	if (size < wsize) size=wsize;
 
