@@ -19,6 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MHDDFS__VERSION__H__
 #define __MHDDFS__VERSION__H__
 
-#define VERSION      "0.1.38"
+#define VERSION        "0.1.39"
 
 #endif

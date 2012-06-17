@@ -42,6 +42,8 @@
 
 #include "debug.h"
 
+#include <uthash.h>
+
 // getattr
 static int mhdd_stat(const char *file_name, struct stat *buf)
 {
@@ -159,11 +161,13 @@ static int mhdd_readdir(
 	mhdd_debug(MHDD_MSG, "mhdd_readdir: %s\n", dirname);
 	char **dirs = (char **) calloc(mhdd.cdirs+1, sizeof(char *));
 
-	struct dir_item {
+	typedef struct dir_item {
 		char            *name;
 		struct stat     *st;
-		struct dir_item *next, *prev;
-	} *dir = 0, *item;
+		UT_hash_handle   hh;
+	} dir_item;
+
+	dir_item * items_ht = NULL;
 
 
 	struct stat st;
@@ -199,53 +203,53 @@ static int mhdd_readdir(
 
 		while((de = readdir(dh))) {
 			// find dups
+			
 			struct dir_item *prev;
-			for(prev = dir; prev; prev = prev->next) {
-				if (strcmp(prev->name, de->d_name) == 0)
-					break;
-			}
 
-			if (prev) continue;
+			HASH_FIND_STR(items_ht, de->d_name, prev);
+
+			if (prev) {
+				continue;
+			}
 
 			// add item
 			char *object_name = create_path(dirs[i], de->d_name);
 			struct dir_item *new_item =
 				calloc(1, sizeof(struct dir_item));
 
-			new_item->name =
-				calloc(strlen(de->d_name) + 1, sizeof(char));
-			strcpy(new_item->name, de->d_name);
+			new_item->name = strdup(de->d_name);
 			new_item->st = calloc(1, sizeof(struct stat));
 			lstat(object_name, new_item->st);
 
-			if (dir) {
-				dir->prev = new_item;
-				new_item->next = dir;
-			}
-			dir = new_item;
+			HASH_ADD_KEYPTR(
+				hh,
+				items_ht,
+				new_item->name,
+				strlen(new_item->name),
+				new_item
+			);
 			free(object_name);
 		}
 
 		closedir(dh);
 	}
 
+	dir_item *item, *tmp;
+
 	// fill list
-	for(item = dir; item; item = item->next) {
+	HASH_ITER(hh, items_ht, item, tmp) {
 		if (filler(buf, item->name, item->st, 0))
 			break;
 	}
 
 	// free memory
-	while(dir) {
-		free(dir->name);
-		free(dir->st);
-		if (dir->next) {
-			dir = dir->next;
-			free(dir->prev);
-			continue;
-		}
-		free(dir); dir = 0;
+	HASH_ITER(hh, items_ht, item, tmp) {
+		free(item->name);
+		free(item->st);
+		free(item);
 	}
+	HASH_CLEAR(hh, items_ht);
+
 	for (i = 0; dirs[i]; i++)
 		free(dirs[i]);
 	free(dirs);

@@ -133,6 +133,8 @@ It's neccessary for install to have:
 1. FUSE header files
 2. GCC  
 3. libc6 header files
+4. uthash header files
+5. libattr1 header files (optional)
 
 Run 'make' in the source directory produces mhddfs binary. 
 

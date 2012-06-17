@@ -189,6 +189,24 @@ rename-test: $(TARGET)
 	rm -fr $@
 	@echo '******************** PASSED ***********************'
 
+dirtree-test: $(TARGET)
+	fusermount -u $@/mnt || true
+	rm -f logfile.log
+	rm -fr $@
+	mkdir $@ $@/1 $@/2 $@/mnt
+	./$(TARGET) $@/1 $@/2 $@/mnt -o logfile=logfile.log,loglevel=0
+	bash -c 'touch $@/1/{1,2,3,4} $@/2/{3,4,5,6}'
+	test `find $@/mnt -type f | sort -u |wc -l` -eq 6
+	test -e $@/mnt/1
+	test -e $@/mnt/2
+	test -e $@/mnt/3
+	test -e $@/mnt/4
+	test -e $@/mnt/5
+	test -e $@/mnt/6
+	fusermount -u $@/mnt
+	rm -fr $@
+	@echo '******************** PASSED ***********************'
+
 .PHONY: all clean open_project tarball \
 	release_svn_thread test-mount test-umount \
 	images-mount test tests rename-test \

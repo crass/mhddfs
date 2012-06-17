@@ -1,3 +1,10 @@
+mhddfs (0.1.39) unstable; urgency=low
+
+  * Kalyanov Dmitry optimized readdir function: now we use HASH-tables
+    to deduplicate directories.
+
+ -- Dmitry E. Oboukhov <unera@debian.org>  Sun, 17 Jun 2012 17:46:43 +0400
+
 mhddfs (0.1.38) unstable; urgency=low
 
   * Apply hardlinks patch, big thanks for patch to
