@@ -36,7 +36,7 @@ int mhdd_debug(int level, const char *fmt, ...)
 		default:         fprintf(mhdd.debug, ": ");  break;
 	}
 
-	fprintf(mhdd.debug, "[%ld] ", pthread_self());
+	fprintf(mhdd.debug, "[%ld] ", (long int)pthread_self());
 
 	va_list ap;
 	va_start(ap, fmt);

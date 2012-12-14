@@ -28,7 +28,6 @@
 #include <errno.h>
 #include <dirent.h>
 #include <sys/types.h>
-#include <sys/vfs.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <utime.h>
